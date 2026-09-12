@@ -1,0 +1,66 @@
+name: Release Drafter
+
+on:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: write
+
+jobs:
+    draft:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - name: Read version
+              id: version
+              run: |
+                  version="$(grep -m 1 -E '^version = "' pyproject.toml | sed -E 's/^version = "([^"]+)".*$/\1/')"
+                  if test -z "$version"; then
+                      echo '::error::Could not find a version = "X" line in pyproject.toml'
+                      exit 1
+                  fi
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+            - name: Skip if tag exists
+              id: tag
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  if git ls-remote --tags origin "refs/tags/v$VERSION" | grep -q .; then
+                      echo "::notice::Tag v$VERSION already exists; nothing to draft"
+                      echo "exists=true" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "exists=false" >> "$GITHUB_OUTPUT"
+                  fi
+            - name: Check version parity
+              if: steps.tag.outputs.exists != 'true'
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  init_version="$(grep -m 1 -E '^__version__ = "' src/cce/__init__.py | sed -E 's/^__version__ = "([^"]+)".*$/\1/')"
+                  if test "$init_version" != "$VERSION"; then
+                      echo "::error::Version mismatch: pyproject.toml has $VERSION but src/cce/__init__.py has ${init_version:-no __version__}"
+                      exit 1
+                  fi
+            - name: Delete existing draft
+              if: steps.tag.outputs.exists != 'true'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GH_REPO: ${{ github.repository }}
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  if test "$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null)" = "true"; then
+                      gh release delete "v$VERSION" --yes
+                  fi
+            - name: Draft release
+              if: steps.tag.outputs.exists != 'true'
+              uses: softprops/action-gh-release@v3
+              with:
+                  tag_name: v${{ steps.version.outputs.version }}
+                  name: v${{ steps.version.outputs.version }}
+                  draft: true
+                  generate_release_notes: true

@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# cce
+requirements-audit.txt
+.cce-artifacts/
