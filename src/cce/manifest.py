@@ -18,7 +18,11 @@ MANIFEST_RESOURCE = "overlays/scenarios.toml"
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _ID_RE = re.compile(r"^\d{2}$")
 _SLUG_RE = re.compile(r"^\d{2}-[a-z][a-z0-9-]*$")
-_SCENARIO_KEYS = frozenset({"id", "slug", "title"})
+_SCENARIO_KEYS = frozenset(
+    {"id", "slug", "title", "overlay", "skills", "agents", "files", "executable", "tabs"}
+)
+_NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+DEFAULT_PROCEDURES_DIR = "_shared/procedures"
 
 FrontMatterValue = str | list[str]
 
@@ -28,12 +32,43 @@ class ManifestError(CceError):
 
 
 @dataclass(frozen=True, slots=True)
+class SkillsSpec:
+    """How a scenario derives its skills from the shared procedures."""
+
+    rename: str | None = None
+    rotate_descriptions: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class FileSpec:
+    """A shared file copied (rendered) into the worktree at ``dest``."""
+
+    src: str
+    dest: str
+    executable: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class Tab:
+    """A herdr tab: label plus the shell command it runs."""
+
+    label: str
+    command: str
+
+
+@dataclass(frozen=True, slots=True)
 class Scenario:
     """One scenario as declared in the manifest."""
 
     id: str
     slug: str
     title: str
+    overlay: str | None = None
+    skills: SkillsSpec | None = None
+    agents: tuple[str, ...] = ()
+    files: tuple[FileSpec, ...] = ()
+    executable: tuple[str, ...] = ()
+    tabs: tuple[Tab, ...] = ()
 
     @property
     def name(self) -> str:
@@ -48,6 +83,7 @@ class Manifest:
     source_url: str
     source_ref: str
     scenarios: tuple[Scenario, ...]
+    procedures: str = DEFAULT_PROCEDURES_DIR
 
     def find(self, token: str) -> Scenario | None:
         """Resolve ``3``, ``03``, ``03-skills-on-demand`` or ``skills-on-demand``."""
@@ -89,7 +125,13 @@ def parse(text: str) -> Manifest:
         _scenario(_mapping(item, "scenario"), index) for index, item in enumerate(raw_scenarios)
     )
     _reject_duplicates(scenarios)
-    return Manifest(source_url=url, source_ref=ref, scenarios=scenarios)
+    procedures = source.get("procedures", DEFAULT_PROCEDURES_DIR)
+    return Manifest(
+        source_url=url,
+        source_ref=ref,
+        scenarios=scenarios,
+        procedures=_string(procedures, "source.procedures"),
+    )
 
 
 def resolve_ids(manifest: Manifest, tokens: Iterable[str]) -> list[Scenario]:
@@ -186,7 +228,88 @@ def _scenario(data: Mapping[str, Any], index: int) -> Scenario:
         raise ManifestError(f"scenario id must be two digits, got {scenario_id!r}")
     if not _SLUG_RE.match(slug) or not slug.startswith(scenario_id + "-"):
         raise ManifestError(f"scenario slug must be '{scenario_id}-<name>', got {slug!r}")
-    return Scenario(id=scenario_id, slug=slug, title=title)
+    where = f"scenario {slug}"
+    overlay = data.get("overlay")
+    if overlay is not None:
+        overlay = _string(overlay, f"{where}.overlay")
+    return Scenario(
+        id=scenario_id,
+        slug=slug,
+        title=title,
+        overlay=overlay,
+        skills=_skills(data.get("skills"), where),
+        agents=tuple(_names(data.get("agents", []), f"{where}.agents")),
+        files=tuple(
+            _file(_mapping(item, f"{where}.files"), where)
+            for item in _list(data.get("files", []), f"{where}.files")
+        ),
+        executable=tuple(_strings(data.get("executable", []), f"{where}.executable")),
+        tabs=tuple(
+            _tab(_mapping(item, f"{where}.tabs"), where)
+            for item in _list(data.get("tabs", []), f"{where}.tabs")
+        ),
+    )
+
+
+def _skills(value: object, where: str) -> SkillsSpec | None:
+    if value is None:
+        return None
+    data = _mapping(value, f"{where}.skills")
+    unknown = set(data) - {"rename", "rotate_descriptions"}
+    if unknown:
+        raise ManifestError(f"{where}.skills has unknown keys: {', '.join(sorted(unknown))}")
+    rename = data.get("rename")
+    if rename is not None:
+        rename = _string(rename, f"{where}.skills.rename")
+        if "{n}" not in rename:
+            raise ManifestError(f"{where}.skills.rename must contain '{{n}}'")
+    rotate = data.get("rotate_descriptions", 0)
+    if not isinstance(rotate, int) or isinstance(rotate, bool) or rotate < 0:
+        raise ManifestError(f"{where}.skills.rotate_descriptions must be a non-negative integer")
+    return SkillsSpec(rename=rename, rotate_descriptions=rotate)
+
+
+def _file(data: Mapping[str, Any], where: str) -> FileSpec:
+    unknown = set(data) - {"src", "dest", "executable"}
+    if unknown:
+        raise ManifestError(f"{where}.files has unknown keys: {', '.join(sorted(unknown))}")
+    executable = data.get("executable", False)
+    if not isinstance(executable, bool):
+        raise ManifestError(f"{where}.files.executable must be a boolean")
+    return FileSpec(
+        src=_string(data.get("src"), f"{where}.files.src"),
+        dest=_string(data.get("dest"), f"{where}.files.dest"),
+        executable=executable,
+    )
+
+
+def _tab(data: Mapping[str, Any], where: str) -> Tab:
+    unknown = set(data) - {"label", "command"}
+    if unknown:
+        raise ManifestError(f"{where}.tabs has unknown keys: {', '.join(sorted(unknown))}")
+    return Tab(
+        label=_string(data.get("label"), f"{where}.tabs.label"),
+        command=_string(data.get("command"), f"{where}.tabs.command"),
+    )
+
+
+def _names(value: object, name: str) -> list[str]:
+    names = _strings(value, name)
+    for item in names:
+        if not _NAME_RE.match(item):
+            raise ManifestError(f"{name} entries must be lowercase names, got {item!r}")
+    return names
+
+
+def _strings(value: object, name: str) -> list[str]:
+    items = _list(value, name)
+    return [_string(item, name) for item in items]
+
+
+def _list(value: object, name: str) -> list[Any]:
+    if not isinstance(value, list):
+        raise ManifestError(f"manifest field {name!r} must be a list")
+    return value
 
 
 def _reject_duplicates(scenarios: Iterable[Scenario]) -> None:
