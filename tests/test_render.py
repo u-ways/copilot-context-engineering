@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from cce.manifest import Manifest, parse
+from cce.manifest import Manifest, parse, split_front_matter
 from cce.render import (
     IncludeTarget,
     PlaceholderUpstream,
@@ -239,6 +239,24 @@ class TestPlanScenario:
             'tools: ["read", "search", "web"]'
             in five[".github/agents/researcher.agent.md"].content.decode()
         )
+
+    @pytest.mark.parametrize("token", ["03", "04", "05", "06"])
+    def test_every_rendered_skill_and_agent_quotes_its_description(
+        self, manifest: Manifest, reader: GitUpstream, token: str
+    ) -> None:
+        plan = self.scenario_plan(manifest, reader, token)
+
+        fronted = [
+            dest
+            for dest in plan
+            if dest.startswith(".github/skills/") or dest.startswith(".github/agents/")
+        ]
+        assert fronted, token
+        for dest in fronted:
+            fields, _ = split_front_matter(plan[dest].content.decode())
+            assert isinstance(fields["description"], str) and fields["description"], dest
+            second_line = plan[dest].content.decode().split("\n")[2]
+            assert second_line.startswith('description: "'), dest
 
     def test_s06_has_the_auditor_and_no_skills_or_level_two_headings(
         self, manifest: Manifest, reader: GitUpstream
