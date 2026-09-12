@@ -10,9 +10,10 @@ This index file is not itself an ADR.
 | --- | --- | --- | --- |
 | [ADR-0001](0001-adr-driven-development.md) | ADR-driven development | Accepted | 2026-09-13 |
 | [ADR-0002](0002-toolchain-and-delivery.md) | Toolchain and delivery | Accepted | 2026-09-13 |
+| [ADR-0006](0006-cli-output-and-logging.md) | CLI output and logging | Accepted | 2026-09-13 |
 | [ADR-0007](0007-release-and-update-check.md) | Release and update check | Accepted | 2026-09-13 |
 
-Numbers are allocated per decision area and are not consecutive in the index until the corresponding work lands: ADR-0003 to ADR-0006 and ADR-0008 to ADR-0010 arrive with the pull requests that implement the decisions they record. A number is never reused.
+Numbers are allocated per decision area and are not consecutive in the index until the corresponding work lands: ADR-0003 to ADR-0005 and ADR-0008 to ADR-0010 arrive with the pull requests that implement the decisions they record. A number is never reused.
 
 ## File naming
 

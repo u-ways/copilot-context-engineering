@@ -1,0 +1,35 @@
+# Scenario manifest. Everything that differs between scenarios is declared here.
+
+[source]
+url = "https://github.com/NHSDigital/software-engineering-quality-framework"
+ref = "6241aad0e6377588b624e7b5d407a6a0c3236e26"
+
+[[scenario]]
+id = "01"
+slug = "01-instructions-timeless"
+title = "Instructions hold durable rules, not changing repo state"
+
+[[scenario]]
+id = "02"
+slug = "02-instructions-context-cost"
+title = "Task runbooks in instructions are paid on every request"
+
+[[scenario]]
+id = "03"
+slug = "03-skills-on-demand"
+title = "The same procedures as skills cost nothing until matched"
+
+[[scenario]]
+id = "04"
+slug = "04-skills-description-routing"
+title = "Descriptions route skills"
+
+[[scenario]]
+id = "05"
+slug = "05-agent-permissions"
+title = "Permissions belong to the role"
+
+[[scenario]]
+id = "06"
+slug = "06-agent-context-isolation"
+title = "Delegate when you need the result, not the investigation"

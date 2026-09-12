@@ -1,13 +1,16 @@
-"""The ``cce`` command prints results on stdout and nothing else (ADR-0002)."""
+"""The ``cce`` command prints results on stdout and logs on stderr (ADR-0006)."""
 
+import json
 import sys
+from pathlib import Path
 
 import pytest
+import typer
 from typer.testing import CliRunner
 
 import cce
 from cce import CceError
-from cce.cli import app, main
+from cce.cli import app, default_workspace, guarded, main
 
 
 class TestVersionCommand:
@@ -24,16 +27,109 @@ class TestVersionCommand:
 
 
 class TestNoArguments:
-    def test_shows_help_and_lists_the_version_command(self, cli: CliRunner) -> None:
+    def test_shows_help_and_lists_the_commands(self, cli: CliRunner) -> None:
         result = cli.invoke(app, [])
 
         assert "version" in result.stdout
+        assert "doctor" in result.stdout
 
     def test_unknown_command_is_a_usage_error(self, cli: CliRunner) -> None:
         result = cli.invoke(app, ["definitely-not-a-command"])
 
         assert result.exit_code == 2
         assert result.stdout == ""
+
+
+class TestGlobalOptions:
+    def test_verbose_and_quiet_together_are_a_usage_error(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["-v", "-q", "version"])
+
+        assert result.exit_code == 2
+        assert "mutually exclusive" in result.stderr
+
+    def test_verbose_json_logs_go_to_stderr_as_json(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["-v", "--log-format", "json", "version"])
+
+        assert result.exit_code == 0
+        assert result.stdout == f"cce {cce.__version__}\n"
+        record = json.loads(result.stderr.splitlines()[0])
+        assert record["event"] == "start"
+        assert record["level"] == "debug"
+
+    def test_log_format_can_come_from_the_environment(
+        self, cli: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("CCE_LOG_FORMAT", "json")
+
+        result = cli.invoke(app, ["-v", "version"])
+
+        assert json.loads(result.stderr.splitlines()[0])["event"] == "start"
+
+    def test_quiet_suppresses_the_start_record(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["-q", "version"])
+
+        assert result.stderr == ""
+
+
+class TestDefaultWorkspace:
+    def test_cce_workspace_wins(self, tmp_path: Path) -> None:
+        env = {"CCE_WORKSPACE": str(tmp_path / "ws"), "XDG_DATA_HOME": str(tmp_path / "xdg")}
+
+        assert default_workspace(env, tmp_path) == tmp_path / "ws"
+
+    def test_xdg_data_home_is_next(self, tmp_path: Path) -> None:
+        assert default_workspace({"XDG_DATA_HOME": str(tmp_path / "xdg")}, tmp_path) == (
+            tmp_path / "xdg" / "cce"
+        )
+
+    def test_falls_back_to_local_share(self, tmp_path: Path) -> None:
+        assert default_workspace({}, tmp_path) == tmp_path / ".local" / "share" / "cce"
+
+
+class TestGuarded:
+    def test_turns_cce_error_into_its_exit_code(self) -> None:
+        @guarded
+        def command() -> None:
+            raise CceError("refused", exit_code=3)
+
+        with pytest.raises(typer.Exit) as raised:
+            command()
+
+        assert raised.value.exit_code == 3
+
+    def test_passes_results_through(self) -> None:
+        @guarded
+        def command(value: int) -> int:
+            return value * 2
+
+        assert command(21) == 42
+
+
+class TestDoctorCommand:
+    def test_offline_doctor_prints_rows_and_exits_zero(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["doctor", "--offline"])
+
+        assert result.exit_code == 0, result.stderr
+        rows = result.stdout.splitlines()
+        assert rows[0].startswith("ok    python")
+        assert any(row.startswith("ok    upstream") for row in rows)
+
+    def test_json_output_is_a_list_of_checks(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["doctor", "--offline", "--json"])
+
+        checks = json.loads(result.stdout)
+        assert {"name", "status", "detail"} <= set(checks[0])
+
+    def test_failures_exit_three_after_printing_rows(
+        self, cli: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setenv("PATH", str(tmp_path / "empty-bin"))
+
+        result = cli.invoke(app, ["doctor", "--offline"])
+
+        assert result.exit_code == 3
+        assert "fail  git" in result.stdout
+        assert "doctor found failures" in result.stderr
 
 
 class TestConsoleScriptEntryPoint:

@@ -72,6 +72,7 @@ smoke:
     export PATH="$(uv tool dir --bin):$PATH"
     cce --help
     cce version
+    cce doctor --offline
 
 # Remove caches, build output and generated reports
 clean:
