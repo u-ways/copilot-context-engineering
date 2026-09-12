@@ -4,6 +4,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+import structlog
 from typer.testing import CliRunner
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -19,6 +20,7 @@ def quiet_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterat
     monkeypatch.delenv("HERDR_ENV", raising=False)
     monkeypatch.delenv("CCE_WORKSPACE", raising=False)
     yield
+    structlog.reset_defaults()
 
 
 @pytest.fixture
