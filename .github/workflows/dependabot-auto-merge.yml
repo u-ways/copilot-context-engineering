@@ -1,0 +1,32 @@
+name: Dependabot auto-merge
+
+on:
+    pull_request:
+
+permissions:
+    contents: write
+    pull-requests: write
+
+jobs:
+    auto-merge:
+        if: github.actor == 'dependabot[bot]'
+        runs-on: ubuntu-latest
+        steps:
+            - name: Fetch Dependabot metadata
+              id: metadata
+              uses: dependabot/fetch-metadata@v3
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+            # A merge performed with the default GITHUB_TOKEN does not trigger other workflows,
+            # so the resulting push to main would run neither CI nor the release drafter. Using a
+            # personal token (RELEASE_AUTOMATION_TOKEN) makes that merge push trigger both.
+            # Workflows triggered by Dependabot only see Dependabot secrets, not repository
+            # secrets, so the owner must also add RELEASE_AUTOMATION_TOKEN as a Dependabot secret
+            # (Settings > Secrets and variables > Dependabot); until then this falls back to
+            # GITHUB_TOKEN and the merge lands without triggering CI or the drafter on main.
+            - name: Enable auto-merge for patch and minor updates
+              if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
+              env:
+                  PR_URL: ${{ github.event.pull_request.html_url }}
+                  GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN || secrets.GITHUB_TOKEN }}
+              run: gh pr merge --auto --squash "$PR_URL"

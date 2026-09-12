@@ -1,0 +1,59 @@
+name: Release
+
+on:
+    push:
+        tags:
+            - "v*"
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version to publish, without the leading v"
+                required: true
+                type: string
+
+permissions:
+    contents: write
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - name: Resolve version
+              id: version
+              env:
+                  INPUT_VERSION: ${{ inputs.version }}
+              run: |
+                  if test "$GITHUB_EVENT_NAME" = "workflow_dispatch"; then
+                      version="${INPUT_VERSION#v}"
+                  else
+                      version="${GITHUB_REF_NAME#v}"
+                  fi
+                  if test -z "$version"; then
+                      echo "::error::Could not resolve a version to publish"
+                      exit 1
+                  fi
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+            - name: Create tag if missing
+              if: github.event_name == 'workflow_dispatch'
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  if ! git rev-parse -q --verify "refs/tags/v$VERSION" > /dev/null; then
+                      git config user.name "github-actions[bot]"
+                      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                      git tag "v$VERSION"
+                      git push origin "v$VERSION"
+                  fi
+            # Updates an existing draft or published release for the tag, or creates one if none exists.
+            - name: Publish release
+              uses: softprops/action-gh-release@v3
+              with:
+                  tag_name: v${{ steps.version.outputs.version }}
+                  name: v${{ steps.version.outputs.version }}
+                  draft: false
+                  prerelease: false
+                  generate_release_notes: true

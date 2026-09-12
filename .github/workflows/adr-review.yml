@@ -1,0 +1,72 @@
+name: ADR review
+
+on:
+    pull_request:
+        types:
+            - opened
+            - synchronize
+            - reopened
+            - ready_for_review
+
+permissions:
+    contents: read
+    pull-requests: write
+
+concurrency:
+    group: adr-review-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    adr-review:
+        if: github.actor != 'dependabot[bot]' && github.event.pull_request.draft == false
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - name: Set up Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+            - name: Install Claude Code
+              run: npm install -g @anthropic-ai/claude-code@2.1.270
+            - name: Review against ADRs
+              env:
+                  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+                  GH_TOKEN: ${{ github.token }}
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+                  REPO: ${{ github.repository }}
+              run: |
+                  claude -p "$(cat .github/adr-review/prompt.md)" --model claude-opus-5 --allowedTools "Read,Grep,Glob,Write,Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh api:*),Bash(git log:*),Bash(git diff:*),Bash(jq:*)"
+            - name: Enforce verdict
+              if: always()
+              run: |
+                  if ! test -f adr-review-verdict.json; then
+                      echo "::error::adr-review-verdict.json was not written; the ADR review did not complete"
+                      {
+                          echo "## ADR review"
+                          echo ""
+                          echo "FAIL: no verdict file was produced, so the review did not complete."
+                      } >> "$GITHUB_STEP_SUMMARY"
+                      exit 1
+                  fi
+                  violations="$(jq -r .violations adr-review-verdict.json)"
+                  {
+                      echo "## ADR review"
+                      echo ""
+                      echo '```json'
+                      jq . adr-review-verdict.json
+                      echo '```'
+                      echo ""
+                      if test "$violations" = "0"; then
+                          echo "PASS: no ADR violations found."
+                      else
+                          echo "FAIL: $violations ADR violation(s) found; see the review comments on the pull request."
+                      fi
+                  } >> "$GITHUB_STEP_SUMMARY"
+                  if ! test "$violations" = "0"; then
+                      echo "::error::ADR review reported $violations violation(s)"
+                      exit 1
+                  fi

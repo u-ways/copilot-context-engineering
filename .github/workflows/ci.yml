@@ -1,0 +1,74 @@
+name: CI
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+jobs:
+    quality:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+            - name: Set up uv
+              uses: astral-sh/setup-uv@v7
+              with:
+                  enable-cache: true
+            - name: Set up just
+              uses: extractions/setup-just@v4
+            - name: Install
+              run: just install
+            - name: Lint
+              run: just lint
+            - name: Type check
+              run: just typecheck
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+            - name: Set up uv
+              uses: astral-sh/setup-uv@v7
+              with:
+                  enable-cache: true
+            - name: Set up just
+              uses: extractions/setup-just@v4
+            - name: Install
+              run: just install
+            - name: Test with coverage
+              run: just cov
+            - name: Upload coverage report
+              uses: actions/upload-artifact@v7
+              with:
+                  name: coverage
+                  path: coverage.xml
+
+    smoke:
+        strategy:
+            fail-fast: false
+            matrix:
+                os:
+                    - ubuntu-latest
+                    - macos-latest
+        runs-on: ${{ matrix.os }}
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+            - name: Set up uv
+              uses: astral-sh/setup-uv@v7
+              with:
+                  enable-cache: true
+            - name: Set up just
+              uses: extractions/setup-just@v4
+            - name: Smoke test the installed CLI
+              env:
+                  CCE_WORKSPACE: ${{ runner.temp }}/cce-smoke
+              run: just smoke
