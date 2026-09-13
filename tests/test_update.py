@@ -248,7 +248,7 @@ class TestUpdateFunction:
             update(env=env, check_only=False, which=lambda _: None)
 
         assert raised.value.exit_code == 3
-        assert f"@v9.0.0" in str(raised.value)
+        assert "@v9.0.0" in str(raised.value)
 
     def test_failed_upgrade_is_a_runtime_failure(self, release_file: Callable[[str], str]) -> None:
         env = {"CCE_RELEASES_URL": release_file("v9.0.0")}
