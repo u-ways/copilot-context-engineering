@@ -1,5 +1,11 @@
 name: Release
 
+# Publishes the release for a tag. Publishing a draft from the Releases page creates the
+# tag, which runs this on push; workflow_dispatch with a version creates the tag first.
+# The publish step is idempotent across the three starting states: a draft exists (it is
+# published as is, notes untouched), a published release exists (nothing to do), nothing
+# exists (a release is created with generated notes).
+
 on:
     push:
         tags:
@@ -17,6 +23,7 @@ permissions:
 jobs:
     publish:
         runs-on: ubuntu-latest
+        timeout-minutes: 5
         steps:
             - name: Check out
               uses: actions/checkout@v7
@@ -48,12 +55,23 @@ jobs:
                       git tag "v$VERSION"
                       git push origin "v$VERSION"
                   fi
-            # Updates an existing draft or published release for the tag, or creates one if none exists.
             - name: Publish release
-              uses: softprops/action-gh-release@v3
-              with:
-                  tag_name: v${{ steps.version.outputs.version }}
-                  name: v${{ steps.version.outputs.version }}
-                  draft: false
-                  prerelease: false
-                  generate_release_notes: true
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  GH_REPO: ${{ github.repository }}
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  state="$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null || echo "missing")"
+                  case "$state" in
+                      true)
+                          gh release edit "v$VERSION" --draft=false --latest
+                          echo "::notice::Published the draft for v$VERSION; its notes were kept as drafted"
+                          ;;
+                      false)
+                          echo "::notice::v$VERSION is already published; nothing to do"
+                          ;;
+                      *)
+                          gh release create "v$VERSION" --title "v$VERSION" --generate-notes --latest
+                          echo "::notice::Created and published v$VERSION with generated notes"
+                          ;;
+                  esac

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: drafting and publishing run through `gh release` instead of a third-party action, because publishing a draft re-ran note generation and appended a second copy of the notes to every release. The drafter recreates the single draft with GitHub's generated notes, categorised by pull-request label through `.github/release.yml`; publishing a draft keeps its notes untouched. A new `Release Detailer` workflow runs after the drafter, finds the draft (and stops at no cost when there is none), has Claude write a user-facing `### Details` section to a file with read-only tools, and applies it through a trusted step that refuses to touch anything but a draft.
 - Revision 2026-09-13: a `checked_at` in the future (a wrong clock, a restored cache) no longer disables the check; only an elapsed time between zero and the interval throttles it.
 - Revision 2026-09-13: the prompt is reachable only when stdin, stdout and stderr are all TTYs, so `cd "$(cce path N)"` and piped guide tabs never block on it.
 - Revision 2026-09-13: upgrading runs `uv tool install --force "copilot-context-engineering @ git+<repository>@vX.Y.Z"` with the announced tag instead of `uv tool upgrade`, which is a no-op for an install pinned to a tag (it reported success while the binary stayed at the old version) and moves an unpinned install to the head of `main` rather than to the release.
@@ -19,9 +20,10 @@
   2. Read the version from `pyproject.toml` with `grep` and `sed`.
   3. If tag `vX.Y.Z` already exists (`git ls-remote --tags origin refs/tags/vX.Y.Z` matches), emit a `::notice::` and exit 0. This runs before every other check so that merges that do not bump the version, Dependabot merges included, never fail the workflow.
   4. Fail hard if `__version__` in `src/cce/__init__.py` differs from the pyproject version.
-  5. Delete any existing draft release for the tag (`gh release view vX.Y.Z --json isDraft`, then `gh release delete vX.Y.Z --yes` when it is a draft).
-  6. Create a draft release with generated notes via `softprops/action-gh-release` (`tag_name: vX.Y.Z`, `draft: true`, `generate_release_notes: true`).
-- Release publishing (`.github/workflows/release.yml`, on `push` of `v*` tags and on `workflow_dispatch` with a `version` input, `permissions: contents: write`): the version comes from the input or `${GITHUB_REF_NAME#v}`; on dispatch the tag is created in-run if it does not exist; then `softprops/action-gh-release` publishes with `draft: false` and `prerelease: false`. The step is idempotent across the three starting states: a draft exists (it is published), a published release exists (it is updated in place), nothing exists (it is created).
+  5. Delete every existing draft release (published releases are never drafts, so only the in-flight draft goes).
+  6. Create the draft release with `gh release create vX.Y.Z --draft --generate-notes --target <sha>`; `.github/release.yml` groups the notes by pull-request label.
+- Release publishing (`.github/workflows/release.yml`, on `push` of `v*` tags and on `workflow_dispatch` with a `version` input, `permissions: contents: write`): the version comes from the input or `${GITHUB_REF_NAME#v}`; on dispatch the tag is created in-run if it does not exist; then a `gh release` step publishes. It is idempotent across the three starting states: a draft exists (`gh release edit --draft=false --latest`, notes untouched), a published release exists (nothing to do), nothing exists (`gh release create --generate-notes --latest`). Notes are never regenerated for an existing release.
+- Release detailing (`.github/workflows/release-detailer.yml`, `workflow_run` after `Release Drafter` and `workflow_dispatch` with an optional `tag`): a shell step finds the latest draft and stops when there is none; `anthropics/claude-code-action` with `CLAUDE_CODE_OAUTH_TOKEN` and read-only tools plus `Write` composes the full new body, the generated notes verbatim plus a `### Details` section, into a file; a trusted step applies it with `gh release edit --notes-file` after re-checking that the target is still a draft.
 - Update check (`src/cce/update.py`, run from Typer's `result_callback` on success only and skipped for `version`, `update` and `--help`):
   - runs at most once per `CCE_UPDATE_INTERVAL` seconds (default `86400`), tracked by `checked_at` in `$XDG_CACHE_HOME/cce/update-check.json`, which is written before the fetch so an offline machine pays the timeout at most once per interval;
   - is skipped entirely when `CCE_DISABLE_UPDATE_CHECK` or `CI` is set;
@@ -45,7 +47,9 @@
 - Require `tests/test_version.py` to compare the `version` in `pyproject.toml` with `cce.__version__`.
 - Require `pyproject.toml` to declare a static `version` (no `dynamic = ["version"]`) and `src/cce/__init__.py` to define `__version__`.
 - Require `.github/workflows/release-drafter.yml` to check tag existence (`git ls-remote --tags`), then version parity against `src/cce/__init__.py`, before any `softprops/action-gh-release` step.
-- Require `.github/workflows/release.yml` to publish through `softprops/action-gh-release` with `draft: false` and `prerelease: false` and to create the tag in-run on `workflow_dispatch`, so that draft-exists, release-exists and nothing-exists all succeed.
+- Require `.github/workflows/release.yml` to create the tag in-run on `workflow_dispatch` and to handle the three starting states (draft exists, release exists, nothing exists) without regenerating notes for an existing release.
+- Flag `generate_release_notes` or `--generate-notes` applied to a release that already exists.
+- Require `.github/workflows/release-detailer.yml` to give Claude no release-mutating tool and to check `isDraft` before every `gh release edit`.
 - Flag HTTP client use (`urllib.request`, `http.client`, `httpx`, `requests`, `aiohttp`) in `src/cce` outside the injectable fetcher in `update.py`.
 - Flag an update-check code path in `update.py` that is not enclosed by a top-level `except Exception`.
 - Flag `uv build`, wheel or sdist uploads, or PyPI steps in any workflow.

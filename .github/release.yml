@@ -1,0 +1,24 @@
+# Categories for GitHub's automatically generated release notes (what `gh release create
+# --generate-notes` and the Release Drafter produce). Pull requests are grouped by label;
+# unlabelled ones land under "Changed".
+# https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+
+changelog:
+    categories:
+        - title: "Features"
+          labels:
+              - "enhancement"
+              - "feature"
+
+        - title: "Fixes"
+          labels:
+              - "bug"
+              - "fix"
+
+        - title: "Dependency updates"
+          labels:
+              - "dependencies"
+
+        - title: "Changed"
+          labels:
+              - "*"

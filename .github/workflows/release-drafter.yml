@@ -1,9 +1,19 @@
 name: Release Drafter
 
+# On every push to main: read the version from pyproject.toml, stop if its tag already
+# exists (Dependabot merges and docs-only merges never bump it), check the two version
+# files agree, then recreate the draft release for that tag with GitHub's generated
+# notes, categorised by pull-request label through .github/release.yml. The "Release
+# Detailer" workflow then enriches the draft; a human publishes it.
+
 on:
     push:
         branches:
             - main
+
+concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
 
 permissions:
     contents: write
@@ -11,6 +21,7 @@ permissions:
 jobs:
     draft:
         runs-on: ubuntu-latest
+        timeout-minutes: 5
         steps:
             - name: Check out
               uses: actions/checkout@v7
@@ -46,21 +57,17 @@ jobs:
                       echo "::error::Version mismatch: pyproject.toml has $VERSION but src/cce/__init__.py has ${init_version:-no __version__}"
                       exit 1
                   fi
-            - name: Delete existing draft
+            - name: Recreate the draft release
               if: steps.tag.outputs.exists != 'true'
               env:
                   GH_TOKEN: ${{ github.token }}
                   GH_REPO: ${{ github.repository }}
                   VERSION: ${{ steps.version.outputs.version }}
               run: |
-                  if test "$(gh release view "v$VERSION" --json isDraft --jq .isDraft 2>/dev/null)" = "true"; then
-                      gh release delete "v$VERSION" --yes
-                  fi
-            - name: Draft release
-              if: steps.tag.outputs.exists != 'true'
-              uses: softprops/action-gh-release@v3
-              with:
-                  tag_name: v${{ steps.version.outputs.version }}
-                  name: v${{ steps.version.outputs.version }}
-                  draft: true
-                  generate_release_notes: true
+                  # Only drafts are ever deleted; published releases are never drafts.
+                  gh api "repos/$GH_REPO/releases" --paginate --jq '.[] | select(.draft) | .id' \
+                      | while read -r id; do
+                          test -n "$id" && gh api -X DELETE "repos/$GH_REPO/releases/$id"
+                      done
+                  link="$(gh release create "v$VERSION" --draft --generate-notes --title "v$VERSION" --target "$GITHUB_SHA")"
+                  echo "::notice title=Draft v$VERSION::$link"
