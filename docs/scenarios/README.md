@@ -34,13 +34,21 @@ Inside **Run it**, every run is a short numbered sequence with the same cues:
 
 | Cue | What you do |
 | --- | --- |
-| **Start** | Reset the scenario and open a fresh Copilot session in its worktree |
-| **Check** | Look before you type: `/context` at turn 0, and sometimes `/instructions` or `/skills` |
-| **Send** | Type the prompt exactly as written; the wording is part of the experiment |
-| **Observe** | Read the reply, then `/context`, `/usage` and `/diff`, and run the shell commands that confirm what happened |
-| **Quit and reset** | `/exit` Copilot and `cce reset N`, so the next run starts clean |
+| **Start** | Reset the scenario and open a fresh Copilot session in its worktree. The first time Copilot opens a worktree it asks whether you trust the folder: choose `1. Yes`. |
+| **Check** | Look before you type: `/context` at turn 0, and sometimes `/instructions` or `/skills`. Each opens a panel; read it, then press Esc to close it (in `/instructions`, Enter toggles a file, so do not press it). |
+| **Send** | Type the prompt exactly as written; the wording is part of the experiment. |
+| **Observe** | Read the reply and the tool lines above it, then `/context` and `/usage`, and run the shell commands that confirm what happened. |
+| **Quit and reset** | `/exit` Copilot and `cce reset N`, so the next run starts clean. |
 
-Two terminals make this comfortable: one for Copilot, one for the shell commands (`cd "$(cce path N)"` puts it in the right worktree). Models are non-deterministic, so token counts and wording will differ from the figures in the guides; each guide says what must hold on every run and treats its numbers as scale.
+Every session in the guides starts as `copilot --allow-all --model claude-sonnet-5`, plus the flags a run needs. `--allow-all` stops permission prompts interrupting the run; the agent's own limits still apply in scenario 05. `--model claude-sonnet-5` pins the model, because the default `Auto` picks a different model each session, and the smaller ones read skill files by hand instead of loading them, which spoils scenarios 03 and 04. Every figure in the guides was measured on Claude Sonnet 5, Copilot CLI 1.0.83.
+
+Three panels carry the numbers you record:
+
+- `/context` shows the total (`21k/264k tokens`), a `System Prompt` line (repository instructions and skill descriptions land here) and a `Messages` line (the conversation, tool results included). After the first turn its header names the model.
+- `/usage` shows `AI Credits` for the session and `Tokens ↑`, the input tokens sent. Copilot bills one AI credit as $0.01, and the guides convert credits to dollars at that rate so the cost is visible; the rate may change, the ratios will not.
+- `/diff` is a full-screen viewer of your uncommitted changes. When there are none it falls back to the scenario's own commits, so "nothing changed" means the file you care about is not in its list; `git status --porcelain` in the shell is the definitive check.
+
+Two terminals make this comfortable: one for Copilot, one for the shell commands (`cd "$(cce path N)"` puts it in the right worktree). Models are non-deterministic, so token counts and wording will differ from the figures in the guides; each guide says what must hold on every run and gives its figures for scale.
 
 ## Scenarios
 

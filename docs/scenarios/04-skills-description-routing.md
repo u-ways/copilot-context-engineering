@@ -12,7 +12,7 @@ Before you start: the [setup](../PREREQUISITES.md) is done and `cce list` shows 
 
 Record what you see:
 
-| Run | `/context` at turn 0 | `/context` after the reply | Skill loaded (`/skills`) | Tracer line in the reply |
+| Run | `/context` at turn 0 → after | AI credits (≈ $) | `● skill(...)` line | Last line of the reply |
 | --- | --- | --- | --- | --- |
 | 1, the conversion prompt | | | | |
 
@@ -31,13 +31,13 @@ Record what you see:
 
    Expect: `seqf-procedure-7` describes rewriting a Markdown page to the framework's conventions, while the first `grep -l` shows the conversion body actually lives in `seqf-procedure-8`, and the second shows the publishing body lives in `seqf-procedure-7`. Guess which skill will load before you go on.
 
-2. **Start** the session:
+2. **Start** the session (answer `1. Yes` to the folder-trust question the first time):
 
    ```sh
-   copilot
+   copilot --allow-all --model claude-sonnet-5
    ```
 
-3. **Check**: `/context` at turn 0, and `/skills`, which shows the same eight names with the rotated descriptions on the right. Copilot matches the task against that right-hand column only.
+3. **Check**: `/context` at turn 0, and `/skills`, which shows the eight names with the rotated descriptions beside them (Esc to close). Copilot matches the task against the descriptions only.
 
 4. **Send**:
 
@@ -45,13 +45,26 @@ Record what you see:
    Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
    ```
 
-5. **Observe**: `/skills` shows `seqf-procedure-7` loaded, and only that one. That is the proof, and it does not depend on the model. Then read the reply's last line and its content (expectations in the next section), `/context` (compare with turn 0), `/usage` and `/diff`, which is empty.
+5. **Observe**: the proof is the line
+
+   ```text
+   ● skill(seqf-procedure-7)
+   ```
+
+   and it does not depend on the model. Then read what the model does with a body that does not match the description (expectations in the next section), `/context` (compare with turn 0) and `/usage`. `git status --porcelain` prints nothing.
 
 6. **Quit and reset**: `/exit`, then `cce reset 4`.
 
 ## What to notice
 
-What must hold on every run: `seqf-procedure-7` loads and nothing else does, and no file changes. The reply's content varies with the model, as described below.
+What must hold on every run: `seqf-procedure-7` loads and nothing else does, and no file changes. What the model does next varies, as described below.
+
+Measured on Claude Sonnet 5:
+
+| Run | `/context` turn 0 → after | `/usage` Tokens ↑ | AI credits (≈ $) | Loaded |
+| --- | --- | --- | --- | --- |
+| 1, the conversion prompt | 21k → 51k | 665.6k | 30.7 (≈ $0.31) | `seqf-procedure-7` (the publishing body) |
+| Scenario 03 run B, for comparison | 21k → 32k | 182.5k | 14.9 (≈ $0.15) | `convert-page-to-framework-conventions` |
 
 The rotation, for the three skills that matter here:
 
@@ -72,11 +85,10 @@ for n in 1 2 3 4 5 6 7 8; do
 done
 ```
 
-- The reply usually ends with `procedure: publish-and-open-source-a-repository`, the publishing tracer. The plan text varies with the model: licences, repository hardening, secret scanning and signed commits if it followed the wrong body, or a competent conversion plan about H1s, tables of contents and markdownlint if it noticed the mismatch and answered from the page itself. A model may also omit the tracer or remark that description and body disagree; `/skills` remains the proof.
-- `/context` grew by the publishing body (about 52 KB), not by the conversion body (about 27 KB). Re-derive: `wc -c .github/skills/seqf-procedure-7/SKILL.md .github/skills/seqf-procedure-8/SKILL.md`.
-- Compare with scenario 03's run B: the same prompt loaded `convert-page-to-framework-conventions` there and the reply ended with `procedure: convert-page-to-framework-conventions`.
+- What the model does with the wrong body varies. A weaker model follows it and writes about licences, repository hardening, secret scanning and signed commits, ending with `procedure: publish-and-open-source-a-repository`. The measured Claude Sonnet 5 run noticed the mismatch, said so ("returned reference material that doesn't match its own description"), discarded the body and rebuilt the conventions from the exemplar pages, at twice the credits and more than three times the input tokens of scenario 03's run B. Either way the routing was wrong and you paid for it.
+- `/context` grew by the publishing body (about 52 KB) and everything the model read to recover, not by the conversion body (about 27 KB). Re-derive: `wc -c .github/skills/seqf-procedure-7/SKILL.md .github/skills/seqf-procedure-8/SKILL.md`.
 
-The lesson: names carry no routing signal. The description is the only thing Copilot has when it decides whether to load a skill, so write it as the trigger condition and keep it truthful about what the body does. A good body behind an unrelated description never loads for the tasks it was written for; a wrong body behind the right description, as here, is worse, because it loads confidently and answers the wrong question.
+The lesson: names carry no routing signal. The description is the only thing Copilot has when it decides whether to load a skill, so write it as the trigger condition and keep it truthful about what the body does. A good body behind an unrelated description never loads for the tasks it was written for; a wrong body behind the right description, as here, loads confidently and either answers the wrong question or makes the model pay to work around it.
 
 ## Reset
 

@@ -343,7 +343,7 @@ cce teardown --herdr    # closes only the workspaces it created
 - Lays out a `DEMO` workspace (the presenting guide and `cce list`) plus one herdr workspace per scenario with tabs for the guide, the rendered overlay files and a `copilot` session in the worktree
 - Scenario 06 gets a second tab running `copilot --agent auditor` for run B
 - Workspaces are labelled `cce:demo` and `cce:<slug>`; duplicates are refused with exit 3
-- Between runs: `cce reset N && cd "$(cce path N)" && copilot`; say the turn-0 `/context` number out loud before the prompt
+- Between runs: `cce reset N && cd "$(cce path N)" && copilot --allow-all --model claude-sonnet-5`; say the turn-0 `/context` number out loud before the prompt
 - Without the flag, `cce` never talks to herdr
 
 ---

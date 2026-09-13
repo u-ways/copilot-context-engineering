@@ -4,7 +4,7 @@ These instructions govern the engineering blueprints index kept in `blueprints.m
 
 ## Approved engineering blueprints (allowlist, verified on 2025-10-31)
 
-`blueprints.md` must contain exactly the rows in the approved table below and nothing else.
+The blueprints table in `blueprints.md` must contain exactly the rows in the approved table below and nothing else. The page's heading and introductory paragraphs are not part of the table; leave them exactly as they are.
 
 - A row that is not in the approved table must be removed.
 - A row whose link, type of blueprint or classification has drifted from the approved values must be restored to them.

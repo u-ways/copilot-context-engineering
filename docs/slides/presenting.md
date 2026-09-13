@@ -44,8 +44,10 @@ Three runs work best as a guess first, then the number:
 Every run starts from the committed baseline in a fresh Copilot session. Before each run:
 
 ```sh
-cce reset N && cd "$(cce path N)" && copilot
+cce reset N && cd "$(cce path N)" && copilot --allow-all --model claude-sonnet-5
 ```
+
+The first session in each worktree asks whether you trust the folder (`1. Yes`); `--allow-all` keeps permission prompts off the stage and `--model claude-sonnet-5` keeps the numbers comparable with the guides, since `Auto` picks a different model per session. Quit a session with `/exit`.
 
 Reset even when the previous run made no visible change: a prompt that "did nothing" may still have left a session file or a partial edit, and a reset is instant. Between scenarios, `cce reset all` clears everything. If a worktree is damaged beyond a reset, `cce setup N --force` recreates it from scratch.
 
