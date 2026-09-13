@@ -1,0 +1,141 @@
+/* @theme cce */
+/* A deliberate theme for docs/slides.md: dark ground for projectors, an amber
+   accent from phosphor terminals, IBM Plex Mono for titles and code with IBM
+   Plex Sans for prose. Render with:
+   npx @marp-team/marp-cli docs/slides.md --theme docs/slides-theme.css -o slides.html */
+@import "default";
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+:root {
+    --cce-ground: #151b23;
+    --cce-surface: #1e2631;
+    --cce-line: #2c3642;
+    --cce-text: #e8e6e0;
+    --cce-muted: #9aa6b4;
+    --cce-accent: #f0b048;
+    --cce-code: #8ecae6;
+}
+
+section {
+    background: var(--cce-ground);
+    color: var(--cce-text);
+    font-family: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 25px;
+    line-height: 1.45;
+    padding: 56px 72px 64px;
+    justify-content: flex-start;
+}
+
+section.dense {
+    font-size: 21px;
+}
+
+h1, h2, h3 {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--cce-text);
+    text-wrap: balance;
+}
+
+h1 {
+    font-size: 1.55em;
+    margin: 0 0 0.5em;
+    padding-bottom: 0.3em;
+    border-bottom: 2px solid var(--cce-accent);
+}
+
+h2 {
+    font-size: 1.2em;
+    color: var(--cce-accent);
+}
+
+section:first-of-type h1,
+section:last-of-type h1 {
+    font-size: 2.1em;
+    margin-top: 0.6em;
+}
+
+p, li {
+    max-width: 62ch;
+}
+
+strong {
+    color: var(--cce-accent);
+    font-weight: 600;
+}
+
+a {
+    color: var(--cce-code);
+    text-decoration: none;
+    border-bottom: 1px solid var(--cce-line);
+}
+
+ul, ol {
+    padding-left: 1.2em;
+}
+
+li + li {
+    margin-top: 0.2em;
+}
+
+code {
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.86em;
+    color: var(--cce-code);
+    background: var(--cce-surface);
+    border-radius: 4px;
+    padding: 0.05em 0.3em;
+}
+
+pre {
+    background: var(--cce-surface);
+    border: 1px solid var(--cce-line);
+    border-left: 3px solid var(--cce-accent);
+    border-radius: 6px;
+    padding: 0.7em 0.9em;
+    margin: 0.5em 0;
+    --marp-auto-scaling-white-space: pre-wrap;
+    white-space: pre-wrap;
+}
+
+pre code {
+    display: block;
+    width: 1080px;
+    white-space: pre-wrap;
+    background: transparent;
+    padding: 0;
+    color: var(--cce-text);
+    font-size: 0.8em;
+    line-height: 1.5;
+}
+
+table {
+    font-size: 0.86em;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+}
+
+th, td {
+    padding: 0.35em 0.8em;
+    border: 0;
+    border-bottom: 1px solid var(--cce-line);
+    background: transparent;
+    color: var(--cce-text);
+    text-align: left;
+}
+
+th {
+    color: var(--cce-muted);
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.8em;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+section::after {
+    color: var(--cce-muted);
+    font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    font-size: 0.6em;
+}

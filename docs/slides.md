@@ -1,6 +1,6 @@
 ---
 marp: true
-theme: default
+theme: cce
 paginate: true
 size: 16:9
 ---
@@ -8,20 +8,13 @@ size: 16:9
 <!--
 How to present this deck
 
-  npx @marp-team/marp-cli docs/slides.md -o slides.html
-  npx @marp-team/marp-cli docs/slides.md --pdf
+  just slides                      # HTML into dist/slides.html
+  npx @marp-team/marp-cli docs/slides.md --theme docs/slides-theme.css --pdf
 
 Marp splits slides on the "---" lines below and needs the front matter
 above to stay first in the file. Without Marp, the file renders as
 ordinary Markdown on GitHub, one section per slide.
 -->
-
-<style>
-section { font-size: 26px; }
-section.dense { font-size: 22px; }
-section pre { --marp-auto-scaling-white-space: pre-wrap; white-space: pre-wrap; }
-section pre code { display: block; width: 1080px; white-space: pre-wrap; }
-</style>
 
 # Instructions, skills or agents?
 
