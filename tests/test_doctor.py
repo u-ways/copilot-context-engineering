@@ -23,6 +23,9 @@ title = "Only"
 
 
 def real_run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+    """Real git; a canned Copilot CLI so the suite does not depend on it being installed."""
+    if argv[0] == "copilot":
+        return subprocess.CompletedProcess(list(argv), 0, "GitHub Copilot CLI 1.0.83.\n", "")
     return subprocess.run(list(argv), capture_output=True, text=True, check=False)
 
 
@@ -124,6 +127,49 @@ class TestHealthyMachine:
         assert has_failures(list(checks.values()))
 
 
+class TestCopilotVersion:
+    def test_reports_the_version_when_new_enough(self, tmp_path: Path, manifest: Manifest) -> None:
+        def copilot_run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+            if argv[0] == "copilot":
+                return subprocess.CompletedProcess(
+                    list(argv), 0, "GitHub Copilot CLI 1.0.90.\n", ""
+                )
+            return real_run(argv)
+
+        env = environment(tmp_path)
+        env = Environment(env.env, env.home, env.which, copilot_run, env.python_version)
+
+        check = by_name(run_checks(env, manifest, offline=True))["copilot"]
+        assert check.status is Status.OK and check.detail.startswith("1.0.90")
+
+    def test_warns_when_older_than_the_measured_version(
+        self, tmp_path: Path, manifest: Manifest
+    ) -> None:
+        def copilot_run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+            if argv[0] == "copilot":
+                return subprocess.CompletedProcess(
+                    list(argv), 0, "GitHub Copilot CLI 1.0.42.\n", ""
+                )
+            return real_run(argv)
+
+        env = environment(tmp_path)
+        env = Environment(env.env, env.home, env.which, copilot_run, env.python_version)
+
+        check = by_name(run_checks(env, manifest, offline=True))["copilot"]
+        assert check.status is Status.WARN and "1.0.83" in check.detail
+
+    def test_unparseable_or_failing_probe_warns(self, tmp_path: Path, manifest: Manifest) -> None:
+        def copilot_run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+            if argv[0] == "copilot":
+                raise OSError("cannot execute")
+            return real_run(argv)
+
+        env = environment(tmp_path)
+        env = Environment(env.env, env.home, env.which, copilot_run, env.python_version)
+
+        assert by_name(run_checks(env, manifest, offline=True))["copilot"].status is Status.WARN
+
+
 class TestMissingTools:
     def test_missing_copilot_and_uv_warn_but_missing_claude_is_fine(
         self, tmp_path: Path, manifest: Manifest
@@ -197,6 +243,7 @@ class TestPersonalCustomisation:
         assert check.status is Status.WARN
         assert "~/.copilot/skills" in check.detail
         assert "settings.json hooks" in check.detail
+        assert "docs/presenting.md" in check.detail
 
     def test_empty_directories_and_hookless_settings_are_fine(
         self, tmp_path: Path, manifest: Manifest

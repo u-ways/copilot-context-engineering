@@ -84,6 +84,12 @@ class Inspection:
     dialect: str | None = None
     drifted: bool = False
 
+    @property
+    def remedy(self) -> str:
+        """The command that clears this state (exit code 3 messages name it)."""
+        force = " --force" if self.path.exists() else ""
+        return f"cce setup {self.scenario.id}{force}"
+
 
 @dataclass(slots=True)
 class ScenarioRecord:
@@ -373,7 +379,8 @@ class Workspace:
                 for scenario in scenarios
             }
             refused: list[str] = []
-            for scenario in scenarios:
+            total = len(scenarios)
+            for position, scenario in enumerate(scenarios, start=1):
                 self._remove_staging(scenario)
                 inspection = self.inspect(scenario, state)
                 plan = plans[scenario.slug]
@@ -389,6 +396,7 @@ class Workspace:
                         refused.append(f"{scenario.slug} ({inspection.detail})")
                         continue
                     self._remove_scenario(scenario, state)
+                log.info("creating scenario", slug=scenario.slug, progress=f"{position}/{total}")
                 self._create(scenario, plan, source_ref, dialect, state)
             if refused:
                 raise CceError(
@@ -398,12 +406,14 @@ class Workspace:
         return [self.inspect(scenario) for scenario in scenarios]
 
     def reset(self, scenario: Scenario) -> None:
+        if not self.marker.is_file():
+            raise CceError(f"{self.root} is not a cce workspace; run `cce setup`", exit_code=3)
         with self.locked():
             state = State.load(self.state_path)
             inspection = self.inspect(scenario, state)
             if inspection.status is Status.MISSING:
                 raise CceError(
-                    f"{scenario.slug} is {inspection.detail}; run `cce setup {scenario.id}`",
+                    f"{scenario.slug}: {inspection.detail}; run `{inspection.remedy}`",
                     exit_code=3,
                 )
             ref = f"{BASELINE_REF_PREFIX}{scenario.slug}"
@@ -461,7 +471,7 @@ class Workspace:
         branch = f"cce/{scenario.slug}"
         final = self.path_for(scenario)
         self.scenarios_dir.mkdir(parents=True, exist_ok=True)
-        log.info("creating scenario", slug=scenario.slug, files=len(plan))
+        log.debug("writing overlay", slug=scenario.slug, files=len(plan))
         try:
             self.git.run(
                 ["worktree", "add", "--quiet", "-B", branch, str(staging), source_ref],
