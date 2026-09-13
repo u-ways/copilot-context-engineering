@@ -33,7 +33,7 @@ Neither repository has a licence, so none of that content is redistributed here:
 
 Decisions live in [docs/adrs/](docs/adrs/); ADRs win over every other document, this page included. Releases are described in [docs/RELEASING.md](docs/RELEASING.md).
 
-A developer-facing slide deck lives in [docs/slides.md](docs/slides.md) (Marp; render with `just slides`).
+A developer-facing slide deck lives in [docs/slides/slides.md](docs/slides/slides.md) (Marp; render with `just slides`).
 
 ## Pull requests
 

@@ -35,7 +35,7 @@ class TestGuideFiles:
         assert text.startswith("# "), slug
 
     def test_presenting_guide_exists(self) -> None:
-        assert (REPO_ROOT / "docs" / "presenting.md").read_text().startswith("# ")
+        assert (REPO_ROOT / "docs" / "slides" / "presenting.md").read_text().startswith("# ")
 
 
 class TestEntryPoints:
@@ -88,7 +88,7 @@ class TestPackaging:
 
         assert mapping == {
             "docs/scenarios": "cce/guides",
-            "docs/presenting.md": "cce/guides/presenting.md",
+            "docs/slides/presenting.md": "cce/guides/presenting.md",
         }
 
     def test_loader_prefers_the_packaged_directory_and_falls_back_to_docs(
@@ -113,7 +113,7 @@ class TestPackaging:
         assert guide_path(manifest, "03-skills-on-demand", docs) == (
             docs / "scenarios" / "03-skills-on-demand.md"
         )
-        assert guide_path(manifest, "presenting", docs) == docs / "presenting.md"
+        assert guide_path(manifest, "presenting", docs) == docs / "slides" / "presenting.md"
         assert guide_path(manifest, "scenarios", docs) == docs / "scenarios" / "README.md"
 
 

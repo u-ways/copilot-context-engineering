@@ -9,7 +9,7 @@ size: 16:9
 How to present this deck
 
   just slides                      # HTML into dist/slides.html
-  npx @marp-team/marp-cli docs/slides.md --theme docs/slides-theme.css --pdf
+  npx @marp-team/marp-cli docs/slides/slides.md --theme docs/slides/slides-theme.css --pdf
 
 Marp splits slides on the "---" lines below and needs the front matter
 above to stay first in the file. Without Marp, the file renders as

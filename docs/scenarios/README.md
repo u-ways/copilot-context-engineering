@@ -58,4 +58,4 @@ The guides ship with the tool: `cce guide 3` prints a scenario guide, `cce guide
 
 ## Next
 
-Running the six scenarios as a talk, with timings, audience prompts and an optional herdr layout, is covered in [presenting.md](../presenting.md).
+Running the six scenarios as a talk, with timings, audience prompts and an optional herdr layout, is covered in [presenting.md](../slides/presenting.md).

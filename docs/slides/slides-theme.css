@@ -1,8 +1,8 @@
 /* @theme cce */
-/* A deliberate theme for docs/slides.md: dark ground for projectors, an amber
+/* A deliberate theme for docs/slides/slides.md: dark ground for projectors, an amber
    accent from phosphor terminals, IBM Plex Mono for titles and code with IBM
    Plex Sans for prose. Render with:
-   npx @marp-team/marp-cli docs/slides.md --theme docs/slides-theme.css -o slides.html */
+   npx @marp-team/marp-cli docs/slides/slides.md --theme docs/slides/slides-theme.css -o slides.html */
 @import "default";
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 
