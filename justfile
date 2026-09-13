@@ -73,6 +73,10 @@ smoke:
     cce --help
     cce version
     cce doctor --offline
+    cce setup
+    cce list
+    cce reset all
+    cce teardown
 
 # Remove caches, build output and generated reports
 clean:
