@@ -52,6 +52,7 @@ Binding rules for any coding agent, and any human, working in this repository.
 | `CCE_LLM_RUNTIME` | Default runtime for `just llm` (the `--runtime` pytest option): `copilot` or `claude` |
 | `CCE_LLM_MODEL` | Passed to the runtime as `--model` |
 | `CCE_LLM_ISOLATE` | `1` runs Copilot under a scratch `COPILOT_HOME`; needs `COPILOT_GITHUB_TOKEN` |
+| `COPILOT_HOME` | Copilot's own setting; `cce doctor` checks it (else `~/.copilot`) for global customisation |
 
 ## Layout
 

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: `cce doctor` no longer reports on herdr; the `--herdr` preflight is the only check (ADR-0006).
 
 ## Context
 
@@ -21,7 +22,7 @@ Live talks want every scenario open side by side: its guide, its overlay files a
 - A reader who never passes `--herdr` never sees herdr mentioned by the tool, even inside a herdr session.
 - Presenters get the layout in one command and remove it in one command, without touching workspaces they created by hand.
 - The client is coupled to herdr's JSON shapes; a change there breaks presenter mode only, visible in the recorded-call tests.
-- `HERDR_ENV=1` is a hard requirement, so `cce doctor` checks for `herdr` only under that variable.
+- `HERDR_ENV=1` is a hard requirement, checked by the `--herdr` preflight together with `herdr` being on the path; `cce doctor` does not report on herdr.
 
 ## Review guidance
 

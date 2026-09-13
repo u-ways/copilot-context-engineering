@@ -6,7 +6,7 @@ A run-of-show for giving the six scenarios as a live talk. Each scenario has its
 
 Do these before the talk, not on stage:
 
-- `cce doctor` reports no `fail` rows. Read every `warn` row: it names personal skills, agents, hooks or instructions under `~/.copilot` or `~/.claude` that will show up in `/skills` or change behaviour. Move them aside for the talk, or expect to explain the extra entries.
+- `cce doctor` reports no `fail` rows. Read every `warn` row: it names global instructions, skills, agents or hooks under `~/.copilot` that will show up in `/skills` or change behaviour (`cce doctor --verbose` lists every file). Move them aside for the talk, or expect to explain the extra entries. Doctor does not look at Claude Code's `~/.claude`; isolate that as below when running the Claude dialect.
 - Or isolate instead of moving: run the talk's sessions with `COPILOT_HOME` (and `CLAUDE_CONFIG_DIR` for Claude Code) pointed at a scratch directory, for example `export COPILOT_HOME="$(mktemp -d)"`. A fresh `COPILOT_HOME` hides the credentials that `copilot /login` stored, so also pass `COPILOT_GITHUB_TOKEN="$(gh auth token)"` in that terminal.
 - `cce setup` has run and `cce list` shows every scenario as `ready`.
 - Copilot CLI is logged in (`copilot` starts without a login prompt) and is version 1.0.83 or later.

@@ -168,6 +168,9 @@ def doctor(
         bool, typer.Option("--offline", help="Skip the upstream reachability check.")
     ] = False,
     as_json: Annotated[bool, typer.Option("--json", help="Print the checks as JSON.")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", help="List every file behind a warn row.")
+    ] = False,
 ) -> None:
     """Check this machine for everything the scenarios need."""
     manifest = manifest_module.load()
@@ -182,6 +185,9 @@ def doctor(
             row = check.as_row()
             status = typer.style(row[:4], fg=_STATUS_COLOURS[str(check.status)])
             typer.echo(status + row[4:], color=colour)
+            if verbose:
+                for line in check.details:
+                    typer.echo(f"{'':20}{line}")
     if doctor_checks.has_failures(checks):
         get_logger("cce").error("doctor found failures", exit_code=3)
         raise typer.Exit(3)
