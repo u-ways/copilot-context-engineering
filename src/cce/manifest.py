@@ -22,7 +22,19 @@ _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _ID_RE = re.compile(r"^\d{2}$")
 _SLUG_RE = re.compile(r"^\d{2}-[a-z][a-z0-9-]*$")
 _SCENARIO_KEYS = frozenset(
-    {"id", "slug", "title", "overlay", "skills", "agents", "files", "executable", "tabs"}
+    {"id", "slug", "title", "overlay", "skills", "agents", "files", "executable", "tabs", "checks"}
+)
+_CHECK_KEYS = frozenset(
+    {
+        "name",
+        "prompt",
+        "agent",
+        "contains",
+        "not_contains",
+        "skills_loaded",
+        "files_changed",
+        "files_changed_max",
+    }
 )
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 DEFAULT_PROCEDURES_DIR = "_shared/procedures"
@@ -60,6 +72,35 @@ class Tab:
 
 
 @dataclass(frozen=True, slots=True)
+class Check:
+    """One LLM-tier check: a prompt and the structural assertions on its run."""
+
+    name: str
+    prompt: str
+    agent: str | None = None
+    contains: tuple[str, ...] = ()
+    not_contains: tuple[str, ...] = ()
+    skills_loaded: tuple[str, ...] | None = None
+    files_changed: tuple[str, ...] | None = None
+    files_changed_max: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class Compare:
+    """A cross-run assertion: ``left``'s ``metric`` must exceed ``ratio`` times ``right``'s.
+
+    ``right_metric`` defaults to ``metric``; set it to compare two different
+    metrics, for example a run's subagent tokens against its own main thread.
+    """
+
+    metric: str
+    left: str
+    right: str
+    ratio: float
+    right_metric: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class Scenario:
     """One scenario as declared in the manifest."""
 
@@ -72,6 +113,7 @@ class Scenario:
     files: tuple[FileSpec, ...] = ()
     executable: tuple[str, ...] = ()
     tabs: tuple[Tab, ...] = ()
+    checks: tuple[Check, ...] = ()
 
     @property
     def name(self) -> str:
@@ -87,6 +129,7 @@ class Manifest:
     source_ref: str
     scenarios: tuple[Scenario, ...]
     procedures: str = DEFAULT_PROCEDURES_DIR
+    compares: tuple[Compare, ...] = ()
 
     def find(self, token: str) -> Scenario | None:
         """Resolve ``3``, ``03``, ``03-skills-on-demand`` or ``skills-on-demand``."""
@@ -129,12 +172,19 @@ def parse(text: str) -> Manifest:
     )
     _reject_duplicates(scenarios)
     procedures = source.get("procedures", DEFAULT_PROCEDURES_DIR)
-    return Manifest(
+    compares = tuple(
+        _compare(_mapping(item, "compare"), index)
+        for index, item in enumerate(_list(data.get("compare", []), "compare"))
+    )
+    manifest = Manifest(
         source_url=url,
         source_ref=ref,
         scenarios=scenarios,
         procedures=_string(procedures, "source.procedures"),
+        compares=compares,
     )
+    _validate_compares(manifest)
+    return manifest
 
 
 def resolve_ids(manifest: Manifest, tokens: Iterable[str]) -> list[Scenario]:
@@ -251,7 +301,75 @@ def _scenario(data: Mapping[str, Any], index: int) -> Scenario:
             _tab(_mapping(item, f"{where}.tabs"), where)
             for item in _list(data.get("tabs", []), f"{where}.tabs")
         ),
+        checks=tuple(
+            _check(_mapping(item, f"{where}.checks"), where)
+            for item in _list(data.get("checks", []), f"{where}.checks")
+        ),
     )
+
+
+def _check(data: Mapping[str, Any], where: str) -> Check:
+    unknown = set(data) - _CHECK_KEYS
+    if unknown:
+        raise ManifestError(f"{where}.checks has unknown keys: {', '.join(sorted(unknown))}")
+    name = _string(data.get("name"), f"{where}.checks.name")
+    if not _NAME_RE.match(name):
+        raise ManifestError(f"{where}.checks.name must be a lowercase name, got {name!r}")
+    agent = data.get("agent")
+    if agent is not None:
+        agent = _string(agent, f"{where}.checks.agent")
+    skills = data.get("skills_loaded")
+    files = data.get("files_changed")
+    maximum = data.get("files_changed_max")
+    if maximum is not None and (
+        not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < 0
+    ):
+        raise ManifestError(f"{where}.checks.files_changed_max must be a non-negative integer")
+    return Check(
+        name=name,
+        prompt=_string(data.get("prompt"), f"{where}.checks.prompt"),
+        agent=agent,
+        contains=tuple(_strings(data.get("contains", []), f"{where}.checks.contains")),
+        not_contains=tuple(_strings(data.get("not_contains", []), f"{where}.checks.not_contains")),
+        skills_loaded=None
+        if skills is None
+        else tuple(_strings(skills, f"{where}.checks.skills_loaded")),
+        files_changed=None
+        if files is None
+        else tuple(_strings(files, f"{where}.checks.files_changed")),
+        files_changed_max=maximum,
+    )
+
+
+def _compare(data: Mapping[str, Any], index: int) -> Compare:
+    unknown = set(data) - {"metric", "left", "right", "ratio", "right_metric"}
+    if unknown:
+        raise ManifestError(f"compare[{index}] has unknown keys: {', '.join(sorted(unknown))}")
+    ratio = data.get("ratio", 1.0)
+    if isinstance(ratio, bool) or not isinstance(ratio, int | float) or ratio <= 0:
+        raise ManifestError(f"compare[{index}].ratio must be a positive number")
+    right_metric = data.get("right_metric")
+    if right_metric is not None:
+        right_metric = _string(right_metric, f"compare[{index}].right_metric")
+    return Compare(
+        metric=_string(data.get("metric"), f"compare[{index}].metric"),
+        left=_string(data.get("left"), f"compare[{index}].left"),
+        right=_string(data.get("right"), f"compare[{index}].right"),
+        ratio=float(ratio),
+        right_metric=right_metric,
+    )
+
+
+def _validate_compares(manifest: Manifest) -> None:
+    known = {
+        f"{scenario.id}/{check.name}"
+        for scenario in manifest.scenarios
+        for check in scenario.checks
+    }
+    for compare in manifest.compares:
+        for side in (compare.left, compare.right):
+            if side not in known:
+                raise ManifestError(f"compare refers to unknown check {side!r}")
 
 
 def _skills(value: object, where: str) -> SkillsSpec | None:

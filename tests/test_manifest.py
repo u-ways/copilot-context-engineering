@@ -170,3 +170,62 @@ class TestFrontMatter:
 
         assert rendered.splitlines()[2] == 'description: "Say \\"hi\\": now"'
         assert split_front_matter(rendered + "body")[0] == fields
+
+
+CHECKED = (
+    VALID
+    + """
+[[scenario.checks]]
+name = "lookup"
+prompt = "How many?"
+contains = ["\\\\b28\\\\b"]
+skills_loaded = []
+files_changed_max = 0
+
+[[compare]]
+metric = "input_tokens"
+left = "02/lookup"
+right = "02/lookup"
+ratio = 1.5
+"""
+)
+
+
+class TestChecksAndCompares:
+    def test_parses_checks_and_compares(self) -> None:
+        manifest = parse(CHECKED)
+
+        check = manifest.scenarios[1].checks[0]
+        assert check.name == "lookup" and check.skills_loaded == () and check.files_changed_max == 0
+        assert manifest.compares[0].left == "02/lookup" and manifest.compares[0].ratio == 1.5
+        assert manifest.compares[0].right_metric is None
+
+    def test_packaged_checks_reference_only_known_agents_and_compares_known_checks(self) -> None:
+        manifest = load()
+
+        for scenario in manifest.scenarios:
+            for check in scenario.checks:
+                assert check.agent is None or check.agent in scenario.agents, check.name
+        assert len(manifest.compares) >= 3
+        assert any(compare.right_metric == "main_input_tokens" for compare in manifest.compares)
+
+    @pytest.mark.parametrize(
+        ("mutation", "message"),
+        [
+            (lambda t: t.replace('left = "02/lookup"', 'left = "09/ghost"'), "unknown check"),
+            (lambda t: t.replace("ratio = 1.5", "ratio = 0"), "positive number"),
+            (lambda t: t.replace('name = "lookup"', 'name = "Look Up"'), "lowercase name"),
+            (
+                lambda t: t.replace("files_changed_max = 0", "files_changed_max = -1"),
+                "non-negative",
+            ),
+            (
+                lambda t: t.replace('prompt = "How many?"', 'prompt = "How many?"\nextra = 1'),
+                "unknown keys",
+            ),
+        ],
+    )
+    def test_rejects_malformed_checks(self, mutation: object, message: str) -> None:
+        assert callable(mutation)
+        with pytest.raises(ManifestError, match=message):
+            parse(mutation(CHECKED))

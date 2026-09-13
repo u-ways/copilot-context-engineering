@@ -41,6 +41,15 @@ Fill in the table as you go:
 | A, delegated | | | | | |
 | B, `--agent auditor` | | | | | |
 
+For scale, one measured run of both beats through the non-interactive `copilot -p` runner (Copilot CLI 1.0.83, the default model) gave:
+
+| Run | Main thread, cumulative input tokens | Main thread, final call | Subagents, cumulative input tokens |
+| --- | --- | --- | --- |
+| A, delegated | 57,852 | 19,543 | 933,233 |
+| B, `--agent auditor` | 341,578 | 89,442 | 0 |
+
+The work is the same size either way; delegation decides whose context pays for it. `just llm copilot` in this repository re-measures these figures.
+
 ### The number
 
 - The answer is 218 in both runs, scoped to the 48 upstream Markdown files with `.github` and `.claude` excluded and fenced code ignored. Re-derive: `grep -rhE '^## ' --include='*.md' --exclude-dir=.github --exclude-dir=.claude . | wc -l`.
