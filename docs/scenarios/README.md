@@ -3,11 +3,11 @@
 This guide covers everything you need to run the scenarios successfully, so you get a clear picture of how different context-loading mechanisms affect correctness and usage cost. By the end you should have a strong understanding of why the choice between instructions, skills and agents can significantly improve your outcomes and your value per token.
 
 > [!WARNING]
-> Please complete the [setup instructions](../PREREQUISITES.md) before proceeding. This is a technical walkthrough on non-deterministic systems; the setup guide ensures the right environment for a good experience.
+> Please complete the [setup instructions](../PREREQUISITES.md) before proceeding. This is a technical walkthrough on non-deterministic systems; the setup guide ensures the right environment for an optimal experience.
 
 ## Background: NHS Software Engineering Quality Framework
 
-The scenarios run on a pinned commit of the [Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework), a guide maintained by the UK's [National Health Service (NHS)](https://en.wikipedia.org/wiki/National_Health_Service). In our words, it sets out to give teams:
+The scenarios run on a pinned commit of [our fork](https://github.com/u-ways/software-engineering-quality-framework) of the [Software Engineering Quality Framework](https://github.com/NHSDigital/software-engineering-quality-framework), a guide maintained by the UK's [National Health Service (NHS)](https://en.wikipedia.org/wiki/National_Health_Service). In our words, it sets out to give teams:
 
 - a shared, cross-team picture of what good engineering looks like;
 - ways to gauge their current engineering maturity and their technical debt;

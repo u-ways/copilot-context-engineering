@@ -84,7 +84,7 @@ cce guide 3    # read the guide for scenario 03
 cce reset 3    # return scenario 03 to its committed baseline
 ```
 
-- Base content: NHSDigital/software-engineering-quality-framework, a public docs repository, fetched at runtime at a pinned commit and never redistributed
+- Base content: u-ways/software-engineering-quality-framework, a fork of the NHS's public docs repository, fetched at runtime at a pinned commit and never redistributed
 - One git worktree per scenario; the Copilot files are an overlay committed as a resettable baseline
 - Same protocol every run: fresh session, `/context`, prompt, `/context`, `/usage`, `/diff`
 
