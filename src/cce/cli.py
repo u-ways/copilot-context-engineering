@@ -18,7 +18,9 @@ import typer
 from cce import CceError, __version__
 from cce import doctor as doctor_checks
 from cce import manifest as manifest_module
+from cce.dialect import Dialect
 from cce.log import LogFormat, configure, get_logger
+from cce.workspace import Status, Workspace
 
 app = typer.Typer(
     name="cce",
@@ -113,6 +115,137 @@ def doctor(
     if doctor_checks.has_failures(checks):
         get_logger("cce").error("doctor found failures", exit_code=3)
         raise typer.Exit(3)
+
+
+def _workspace(ctx: typer.Context) -> tuple[Workspace, manifest_module.Manifest]:
+    settings: Settings = ctx.obj
+    manifest = manifest_module.load()
+    return Workspace(settings.workspace, manifest), manifest
+
+
+def _one(manifest: manifest_module.Manifest, token: str) -> manifest_module.Scenario:
+    return manifest_module.resolve_ids(manifest, [token])[0]
+
+
+@app.command()
+@guarded
+def setup(
+    ctx: typer.Context,
+    ids: Annotated[
+        list[str] | None,
+        typer.Argument(help="Scenario ids (3, 03, 03-skills-on-demand); default: all."),
+    ] = None,
+    source_url: Annotated[
+        str | None, typer.Option("--source-url", help="Override the upstream repository URL.")
+    ] = None,
+    source_ref: Annotated[
+        str | None, typer.Option("--source-ref", help="Override the pinned upstream ref.")
+    ] = None,
+    force: Annotated[
+        bool, typer.Option("--force", help="Recreate modified or unregistered worktrees.")
+    ] = False,
+    dialect: Annotated[
+        Dialect, typer.Option("--dialect", help="Render overlays for copilot or claude.")
+    ] = Dialect.COPILOT,
+) -> None:
+    """Clone the pinned upstream and prepare one worktree per scenario."""
+    workspace, manifest = _workspace(ctx)
+    scenarios = manifest_module.resolve_ids(manifest, ids or [])
+    results = workspace.setup(
+        scenarios,
+        source_url=source_url or manifest.source_url,
+        source_ref=source_ref or manifest.source_ref,
+        force=force,
+        dialect=dialect,
+    )
+    for row in results:
+        typer.echo(f"{row.scenario.id}  {row.scenario.slug}  {row.status}  {row.path}")
+
+
+@app.command("list")
+@guarded
+def list_scenarios(
+    ctx: typer.Context,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the rows as JSON.")] = False,
+) -> None:
+    """Show every scenario with its status (missing, ready or modified)."""
+    workspace, _ = _workspace(ctx)
+    rows = workspace.inspect_all()
+    if as_json:
+        typer.echo(
+            json.dumps(
+                [
+                    {
+                        "id": row.scenario.id,
+                        "slug": row.scenario.slug,
+                        "status": str(row.status),
+                        "detail": row.detail,
+                        "path": str(row.path),
+                        "dialect": row.dialect,
+                        "drifted": row.drifted,
+                    }
+                    for row in rows
+                ],
+                indent=2,
+            )
+        )
+        return
+    for row in rows:
+        suffix = "  [overlay changed; run cce setup]" if row.drifted else ""
+        typer.echo(f"{row.scenario.id}  {row.scenario.slug}  {row.status}  {row.path}{suffix}")
+
+
+@app.command()
+@guarded
+def path(
+    ctx: typer.Context,
+    scenario_id: Annotated[str, typer.Argument(metavar="ID", help="Scenario id.")],
+) -> None:
+    """Print the absolute worktree path of a scenario."""
+    workspace, manifest = _workspace(ctx)
+    inspection = workspace.inspect(_one(manifest, scenario_id))
+    if inspection.status is Status.MISSING:
+        scenario = inspection.scenario
+        raise CceError(
+            f"{scenario.slug} is {inspection.detail}; run `cce setup {scenario.id}`", exit_code=3
+        )
+    typer.echo(str(inspection.path.resolve()))
+
+
+@app.command()
+@guarded
+def reset(
+    ctx: typer.Context,
+    scenario_id: Annotated[str, typer.Argument(metavar="ID|all", help="Scenario id or 'all'.")],
+) -> None:
+    """Return a scenario (or all of them) to its committed baseline."""
+    workspace, manifest = _workspace(ctx)
+    if scenario_id == "all":
+        for scenario in manifest.scenarios:
+            if workspace.inspect(scenario).status is Status.MISSING:
+                get_logger("cce").warning("skipping missing scenario", slug=scenario.slug)
+                continue
+            workspace.reset(scenario)
+            typer.echo(f"{scenario.slug} reset")
+        return
+    scenario = _one(manifest, scenario_id)
+    workspace.reset(scenario)
+    typer.echo(f"{scenario.slug} reset")
+
+
+@app.command()
+@guarded
+def teardown(
+    ctx: typer.Context,
+    force: Annotated[bool, typer.Option("--force", help="Discard modified worktrees.")] = False,
+) -> None:
+    """Remove the workspace: the base clone and every scenario worktree."""
+    workspace, _ = _workspace(ctx)
+    removed = workspace.teardown(force=force)
+    if removed is None:
+        get_logger("cce").info("nothing to remove", workspace=str(workspace.root))
+        return
+    typer.echo(f"removed {removed}")
 
 
 def main() -> None:
