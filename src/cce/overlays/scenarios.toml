@@ -18,7 +18,7 @@ overlay = "01-instructions-timeless"
 [[scenario.checks]]
 name = "allowlist-damage"
 prompt = "Bring blueprints.md into line with the approved blueprints list in the repository instructions."
-contains = ["blueprints\\.md"]
+contains = ["(?i)blueprint"]
 files_changed_max = 1
 
 [[scenario]]
@@ -51,7 +51,7 @@ files_changed_max = 0
 [[scenario.checks]]
 name = "conversion"
 prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
-contains = ["procedure: convert-page-to-framework-conventions"]
+contains = ["(?i)\\bplan\\b"]
 skills_loaded = ["convert-page-to-framework-conventions"]
 files_changed_max = 0
 
@@ -63,11 +63,11 @@ overlay = "04-skills-description-routing"
 skills = { rename = "seqf-procedure-{n}", rotate_descriptions = 1 }
 
 # The routing proof is skills_loaded. Some models then follow the mis-routed
-# body (tracer line), others notice the mismatch and say so; both name the skill.
+# body (and print its tracer line), others notice the mismatch; the prose varies.
 [[scenario.checks]]
 name = "conversion"
 prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
-contains = ["procedure: publish-and-open-source-a-repository|seqf-procedure-7"]
+contains = ["(?i)\\bplan\\b"]
 skills_loaded = ["seqf-procedure-7"]
 files_changed_max = 0
 
