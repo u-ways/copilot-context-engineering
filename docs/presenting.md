@@ -16,9 +16,9 @@ Do these before the talk, not on stage:
 
 ## Run of show
 
-Order 01 to 06. The beat counts below add up to thirteen live sessions (plus `./STRUGGLE.sh`, which prints and exits), and the beats are not equal: scenario 04 is one prompt, while scenario 06's two runs are the slowest (in one measured Copilot run roughly two and a half minutes delegated and just over one minute direct, before reading `/context`). Give scenario 06 eight minutes, budget the others by their beat count, and never leave 06 last with no slack behind it.
+Order 01 to 06. The run counts below add up to thirteen live sessions (plus `./STRUGGLE.sh`, which prints and exits), and the runs are not equal: scenario 04 is one prompt, while scenario 06's two runs are the slowest (in one measurement roughly two and a half minutes delegated and just over one minute direct, before reading `/context`). Give scenario 06 eight minutes, budget the others by their run count, and never leave 06 last with no slack behind it.
 
-| # | Scenario | Beats | The beat |
+| # | Scenario | Runs | The point |
 | --- | --- | --- | --- |
 | 01 | instructions-timeless | 3 | One prompt reverts three real upstream changes because the instructions froze a table in time; the durable rules leave the file alone. |
 | 02 | instructions-context-cost | 3 | A one-fact lookup costs about 100k input tokens with the procedures inlined, and a fraction of that without them. |
@@ -33,7 +33,7 @@ Open with the TL;DR from the README (instructions are "always follow these rules
 
 ## Bring the room in
 
-Three beats work best as a guess first, then the number:
+Three runs work best as a guess first, then the number:
 
 - 02: before typing anything, ask how many input tokens the first `/context` will show. Rooms guess an order of magnitude low.
 - 04: after `ls .github/skills`, ask which skill will load. The names lie; only the description column routes.
@@ -41,15 +41,15 @@ Three beats work best as a guess first, then the number:
 
 ## Reset discipline
 
-Every beat starts from the committed baseline in a fresh Copilot session. Before each beat:
+Every run starts from the committed baseline in a fresh Copilot session. Before each run:
 
 ```sh
 cce reset N && cd "$(cce path N)" && copilot
 ```
 
-Reset even when the previous beat made no visible change: a prompt that "did nothing" may still have left a session file or a partial edit, and a reset is instant. Between scenarios, `cce reset all` clears everything. If a worktree is damaged beyond a reset, `cce setup N --force` recreates it from scratch.
+Reset even when the previous run made no visible change: a prompt that "did nothing" may still have left a session file or a partial edit, and a reset is instant. Between scenarios, `cce reset all` clears everything. If a worktree is damaged beyond a reset, `cce setup N --force` recreates it from scratch.
 
-Within a beat, follow the observation protocol printed in each guide: `/context` before the prompt, the prompt, then `/context`, `/usage` and `/diff` or `git status --porcelain`. Say the turn-0 number out loud before sending the prompt so the audience can compare.
+Within a run, follow the observation protocol printed in each guide: `/context` before the prompt, the prompt, then `/context`, `/usage` and `/diff` or `git status --porcelain`. Say the turn-0 number out loud before sending the prompt so the audience can compare.
 
 ## Presenter mode
 
@@ -57,11 +57,11 @@ Within a beat, follow the observation protocol printed in each guide: `/context`
 
 - Opt-in only. Nothing herdr-related happens without the flag, and the flag refuses to run unless `HERDR_ENV=1` is set exactly and `herdr` is on the path.
 - It creates a `DEMO` workspace (this page in one tab, `cce list` in another) plus one herdr workspace per scenario, each with tabs for the guide, the rendered overlay files and a `copilot` session in the worktree. Scenario 06 gets a second Copilot tab running `copilot --agent auditor` for run B.
-- Both scenario 06 runs leave the worktree untouched, so they can overlap: start run A in the `copilot` tab and run B in the `copilot:auditor` tab while A is still reading. Never overlap two beats that both write to the same worktree.
+- Both scenario 06 runs leave the worktree untouched, so they can overlap: start run A in the `copilot` tab and run B in the `copilot:auditor` tab while A is still reading. Never overlap two runs that both write to the same worktree.
 - Workspaces are labelled `cce:demo` and `cce:<slug>`. If any of those labels already exists, the command refuses (exit 3) rather than creating duplicates; run `cce teardown --herdr` first.
 - `cce teardown --herdr` closes only the workspaces it created, then removes the cce workspace as usual.
 
-## When a beat goes wrong
+## When a run goes wrong
 
 - The model pushes back on a prompt (scenario 01 is the usual place: it may refuse to restore a dead path). Answer as the guide says (`yes, apply the list`) or take the refusal as the lesson. A cautious model demonstrating that stale instructions are wrong is a fine outcome; say so and move on.
 - A personal skill or agent appears in `/skills` or gets loaded. Point at the `cce doctor` warning, note that everything under `~/.copilot` is global to the machine, and continue; the scenario's own skill still loads or does not load as expected.
@@ -72,6 +72,6 @@ Within a beat, follow the observation protocol printed in each guide: `/context`
 
 ## Fallbacks
 
-- Record each beat the day before into `.cce-artifacts/stage/` with any terminal recorder (`script` is everywhere; `asciinema` if it is available). The recordings contain upstream prose, so they stay local: `.cce-artifacts/` is gitignored, and nothing under it is committed or uploaded except the structural result JSON (ADR-0003, ADR-0010).
+- Record each run the day before into `.cce-artifacts/stage/` with any terminal recorder (`script` is everywhere; `asciinema` if it is available). The recordings contain upstream prose, so they stay local: `.cce-artifacts/` is gitignored, and nothing under it is committed or uploaded except the structural result JSON (ADR-0003, ADR-0010).
 - A dead network: the measured figures committed in the guides and the slides survive it. Talk through them over the recording.
 - A model refusal: the guide's "two valid outcomes" text survives it. Scenario 01 is written for both branches, and a refusal is the lesson from the other side.

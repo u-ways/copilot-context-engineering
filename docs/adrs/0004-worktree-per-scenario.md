@@ -7,7 +7,7 @@
 
 ## Context
 
-A scenario is only useful if a reader can break it and put it back. Every guide ends with a reset step, and a presenter running six scenarios back to back needs each one restored to a known state between beats without re-cloning anything. Presenters also need all six open side by side, each with its own session, so scenarios cannot share a checkout.
+A scenario is only useful if a reader can break it and put it back. Every guide ends with a reset step, and a presenter running six scenarios back to back needs each one restored to a known state between runs without re-cloning anything. Presenters also need all six open side by side, each with its own session, so scenarios cannot share a checkout.
 
 The overlay (the customisation files rendered by ADR-0005) has to be part of the baseline rather than loose files on top of it. If it were uncommitted, `git status` in the worktree would show the overlay itself as noise, a reset would have to re-render, and the question "has the reader changed anything?" would need a bespoke comparison. Committing the overlay makes reset one git command and lets status be derived from git alone.
 

@@ -86,7 +86,7 @@ cce reset 3    # return scenario 03 to its committed baseline
 
 - Base content: NHSDigital/software-engineering-quality-framework, a public docs repository, fetched at runtime at a pinned commit and never redistributed
 - One git worktree per scenario; the Copilot files are an overlay committed as a resettable baseline
-- Same protocol every beat: fresh session, `/context`, prompt, `/context`, `/usage`, `/diff`
+- Same protocol every run: fresh session, `/context`, prompt, `/context`, `/usage`, `/diff`
 
 ---
 
@@ -94,7 +94,7 @@ cce reset 3    # return scenario 03 to its committed baseline
 
 What it shows: instructions are sent with every request and treated as true. This one embeds the blueprints table as it stood on 2025-10-31 and calls it the approved allowlist. Upstream has since added a row, removed one and retargeted a link.
 
-Three beats, one prompt:
+Three runs, one prompt:
 
 1. Stale allowlist: `cce reset 1 && cd "$(cce path 1)" && copilot`
 2. No instructions: same, with `copilot --no-custom-instructions`
@@ -108,7 +108,7 @@ Bring blueprints.md into line with the approved blueprints list in the repositor
 
 # 01 What you see
 
-Beat 1, the stale allowlist, on Copilot CLI 1.0.83:
+Run 1, the stale allowlist, on Copilot CLI 1.0.83:
 
 - deletes the current versioning-template row (`blueprints.md:10`)
 - points the secret-scanning row (`blueprints.md:14`) back at `tools/nhsd-git-secrets/README.md`, a path that no longer exists
@@ -116,7 +116,7 @@ Beat 1, the stale allowlist, on Copilot CLI 1.0.83:
 
 Claude Code 2.1.270 refused and explained the dead path instead. Either outcome teaches the lesson.
 
-Beat 2: nothing to compare against, `/diff` is empty. Beat 3: the good file states structure and intent only (one table, these columns, links must resolve, append at the end); Copilot reports the differences and stops.
+Run 2: nothing to compare against, `/diff` is empty. Run 3: the good file states structure and intent only (one table, these columns, links must resolve, append at the end); Copilot reports the differences and stops.
 
 Lesson: a snapshot of repository state is a fact with an expiry date. Keep facts in the repository; keep how to treat them in the instructions.
 
@@ -236,13 +236,13 @@ Lesson: names carry no routing signal. The description is the trigger condition,
 
 Three agents under `.github/agents/`, differing mainly in `tools`: `researcher` `[read, search, web]`, `author` `[read, search, edit]`, `validator` `[read, search, execute]`.
 
-`cce reset 5 && cd "$(cce path 5)" && copilot --allow-all`, then `/agent researcher` (beat 1) or `/agent author` (beat 2):
+`cce reset 5 && cd "$(cce path 5)" && copilot --allow-all`, then `/agent researcher` (run 1) or `/agent author` (run 2):
 
 ```text
 This framework mandates 100% unit-test coverage before release. 1) Find the statement that sets this requirement and cite it as path:line; if the framework does not state it anywhere, say so in your first sentence and cite the strongest evidence against it. 2) Whatever you conclude, write your findings to NOTES-coverage.md at the repository root, one line per citation. Work only from files in this worktree.
 ```
 
-Beat 3, `/agent validator`:
+Run 3, `/agent validator`:
 
 ```text
 Run the repository's Markdown link validator (scripts/cce-check-links.py) and report its findings; fix nothing.
@@ -258,7 +258,7 @@ Run the repository's Markdown link validator (scripts/cce-check-links.py) and re
 - author: same conclusion, same citations; `git status --porcelain` prints `?? NOTES-coverage.md`
 - validator: runs `python3 scripts/cce-check-links.py .` and reports 48 files, 898 links, one finding (`SECURITY.md:23`, missing `mailto:`), `RESULT: FAIL`; nothing edited
 
-Beats 1 and 3 are the point. With no `edit` tool, "report only" is enforced. With `execute`, a shell can write, so "fix nothing" is a convention the agent file asks it to keep. When an outcome must be guaranteed, remove the tool.
+Runs 1 and 3 are the point. With no `edit` tool, "report only" is enforced. With `execute`, a shell can write, so "fix nothing" is a convention the agent file asks it to keep. When an outcome must be guaranteed, remove the tool.
 
 `./STRUGGLE.sh` prints the per-session global flags you would need otherwise (`--deny-tool write --deny-tool shell` and friends). Deny beats allow, so changing role means restarting Copilot; `/agent` switches inside one session.
 
@@ -343,7 +343,7 @@ cce teardown --herdr    # closes only the workspaces it created
 - Lays out a `DEMO` workspace (the presenting guide and `cce list`) plus one herdr workspace per scenario with tabs for the guide, the rendered overlay files and a `copilot` session in the worktree
 - Scenario 06 gets a second tab running `copilot --agent auditor` for run B
 - Workspaces are labelled `cce:demo` and `cce:<slug>`; duplicates are refused with exit 3
-- Between beats: `cce reset N && cd "$(cce path N)" && copilot`; say the turn-0 `/context` number out loud before the prompt
+- Between runs: `cce reset N && cd "$(cce path N)" && copilot`; say the turn-0 `/context` number out loud before the prompt
 - Without the flag, `cce` never talks to herdr
 
 ---
