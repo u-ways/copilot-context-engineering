@@ -41,7 +41,7 @@ Fill in the table as you go:
 | A, delegated | | | | | |
 | B, `--agent auditor` | | | | | |
 
-For scale, one measured run of both beats through the non-interactive `copilot -p` runner (Copilot CLI 1.0.83, the default model) gave:
+For scale, one measurement of both runs through the non-interactive `copilot -p` runner (Copilot CLI 1.0.83, the default model) gave:
 
 | Run | Main thread, cumulative input tokens | Main thread, final call | Subagents, cumulative input tokens | Total input tokens |
 | --- | --- | --- | --- | --- |

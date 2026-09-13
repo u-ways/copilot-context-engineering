@@ -6,19 +6,19 @@ Repository instructions are loaded on every request, so Copilot treats whatever 
 
 A second file, `.github/copilot-instructions.good.md`, is shipped alongside but not loaded. It states the same intent as durable rules about structure (one table, these columns, links must resolve, append at the end) and never lists rows.
 
-Three beats run one prompt under the stale instructions, under no instructions and under the durable ones.
+Three runs send one prompt under the stale instructions, under no instructions and under the durable ones.
 
 ## Run it
 
-Observation protocol for every beat: start a fresh Copilot session in the worktree, type `/context` before the prompt, send the prompt, then `/context`, `/usage` and `/diff` (or `git status --porcelain`). Personal skills and agents from `~/.copilot` may appear in `/skills`; `cce doctor` warns about them.
+Observation protocol for every run: start a fresh Copilot session in the worktree, type `/context` before the prompt, send the prompt, then `/context`, `/usage` and `/diff` (or `git status --porcelain`). Personal skills and agents from `~/.copilot` may appear in `/skills`; `cce doctor` warns about them.
 
-The prompt is the same in all three beats:
+The prompt is the same in all three runs:
 
 ```text
 Bring blueprints.md into line with the approved blueprints list in the repository instructions.
 ```
 
-### Beat 1: the stale allowlist
+### Run 1: the stale allowlist
 
 ```sh
 cce reset 1 && cd "$(cce path 1)" && copilot
@@ -32,7 +32,7 @@ yes, apply the list
 
 A refusal is itself a valid lesson: the model noticed that the instructions describe a repository state that is no longer true. Record which way it went.
 
-### Beat 2: no instructions
+### Run 2: no instructions
 
 ```sh
 cce reset 1 && cd "$(cce path 1)" && copilot --no-custom-instructions
@@ -40,7 +40,7 @@ cce reset 1 && cd "$(cce path 1)" && copilot --no-custom-instructions
 
 Type `/instructions` to confirm the file is toggled off, then send the prompt.
 
-### Beat 3: the durable instructions
+### Run 3: the durable instructions
 
 ```sh
 cce reset 1 && cd "$(cce path 1)"
@@ -52,7 +52,7 @@ Send the prompt.
 
 ## What to notice
 
-Beat 1 has two valid outcomes, and the same three differences are the evidence for both:
+Run 1 has two valid outcomes, and the same three differences are the evidence for both:
 
 - The versioning-template row at `blueprints.md:10` (added upstream on 2025-11-04) is deleted. Re-derive: `grep -n versioning blueprints.md` before the prompt finds it on line 10.
 - The secret-scanning row at `blueprints.md:14` is pointed back at `tools/nhsd-git-secrets/README.md`, a path that no longer exists. Re-derive: `grep -n gitleaks blueprints.md` shows the current target on line 14; `git cat-file -e HEAD:tools/nhsd-git-secrets/README.md` fails at the pin.
@@ -65,9 +65,9 @@ git diff --stat
 git cat-file -e HEAD:tools/nhsd-git-secrets/README.md; echo "exit=$?"
 ```
 
-Beat 2: there is no approved list to compare against, so Copilot changes nothing; `/diff` is empty. Beat 3: Copilot reports the differences it can see and stops, as the durable rules tell it to; `/diff` is empty.
+Run 2: there is no approved list to compare against, so Copilot changes nothing; `/diff` is empty. Run 3: Copilot reports the differences it can see and stops, as the durable rules tell it to; `/diff` is empty.
 
-Compare the turn-0 `/context` across beats. In beat 1 the embedded table is already in context before you type, and it is paid again on every later turn. Beat 2 starts close to empty.
+Compare the turn-0 `/context` across runs. In run 1 the embedded table is already in context before you type, and it is paid again on every later turn. Run 2 starts close to empty.
 
 The lesson: instructions are the right home for rules that stay true. A snapshot of repository state is a fact with an expiry date, and once it expires the instructions become a tool for undoing progress. Keep such facts in the repository, where git keeps them current, and let the instructions say how to treat them.
 
