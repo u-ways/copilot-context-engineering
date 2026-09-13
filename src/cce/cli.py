@@ -148,7 +148,9 @@ def root(
     verbosity = -1 if quiet else min(verbose, 1)
     configure(verbosity=verbosity, fmt=log_format)
     resolved = workspace if workspace is not None else default_workspace(os.environ, Path.home())
-    ctx.obj = Settings(workspace=resolved.expanduser(), verbosity=verbosity, log_format=log_format)
+    ctx.obj = Settings(
+        workspace=resolved.expanduser().resolve(), verbosity=verbosity, log_format=log_format
+    )
     _INVOKED_COMMAND.set(ctx.invoked_subcommand)
     get_logger("cce").debug("start", argv=sys.argv[1:], workspace=str(ctx.obj.workspace))
 
@@ -222,6 +224,10 @@ def setup(
     """Clone the pinned upstream and prepare one worktree per scenario."""
     workspace, manifest = _workspace(ctx)
     scenarios = manifest_module.resolve_ids(manifest, ids or [])
+    if source_ref is not None and not manifest_module.is_commit_sha(source_ref):
+        raise CceError(
+            f"--source-ref must be a 40-character commit sha, got {source_ref!r}", exit_code=2
+        )
     client = herdr_module.Herdr()
     if herdr:
         # Labels depend only on the requested scenarios, so the collision check

@@ -311,6 +311,80 @@ class TestReset:
         assert not play.root.exists()
 
 
+class TestCorruptState:
+    def test_unreadable_state_is_refused_with_a_remedy_and_force_teardown_works(
+        self, play: Playground
+    ) -> None:
+        play.setup("1")
+        (play.root / "state.json").write_text('{"schema": 1, "source_url": ')
+
+        code, out, err = play.run("list")
+        assert code == 3 and out == "" and "cce teardown --force" in err
+
+        code, _, err = play.run("teardown")
+        assert code == 3 and "--force" in err
+
+        code, _, _ = play.run("teardown", "--force")
+        assert code == 0 and not play.root.exists()
+
+    def test_foreign_schema_is_refused(self, play: Playground) -> None:
+        play.setup("1")
+        state_path = play.root / "state.json"
+        state_path.write_text(state_path.read_text().replace('"schema": 1', '"schema": 99'))
+
+        code, _, err = play.run("list")
+
+        assert code == 3 and "different cce version" in err
+
+
+class TestForeignDirectories:
+    def test_setup_refuses_a_directory_it_did_not_create(self, play: Playground) -> None:
+        play.root.mkdir(parents=True)
+        (play.root / "thesis.docx").write_text("precious\n")
+
+        code, out, err = play.setup("1")
+
+        assert code == 3 and out == "" and "thesis.docx" in err
+        assert not (play.root / ".cce-workspace").exists()
+        assert not (play.root / ".cce.lock").exists()
+        assert (play.root / "thesis.docx").exists()
+
+    def test_setup_accepts_an_empty_directory(self, play: Playground) -> None:
+        play.root.mkdir(parents=True)
+
+        code, _, _ = play.setup("1")
+
+        assert code == 0
+
+
+class TestSourceRef:
+    def test_branch_names_are_a_usage_error(self, play: Playground) -> None:
+        code, out, err = play.run(
+            "setup", "1", "--source-url", play.upstream.url, "--source-ref", "main"
+        )
+
+        assert code == 2 and out == "" and "40-character commit sha" in err
+
+
+class TestPaths:
+    def test_list_and_path_agree_through_a_symlinked_workspace(
+        self, play: Playground, tmp_path: Path
+    ) -> None:
+        real = tmp_path / "real-ws"
+        real.mkdir()
+        link = tmp_path / "link-ws"
+        link.symlink_to(real)
+        play.root = link
+        play.setup("1")
+
+        _, listing, _ = play.run("list")
+        _, path, _ = play.run("path", "1")
+
+        row = next(line for line in listing.split("\n") if "01-instructions-timeless" in line)
+        assert path.strip() in row
+        assert path.strip().startswith(str(real.resolve()))
+
+
 class TestTeardown:
     def test_removes_the_workspace_when_nothing_is_modified(self, play: Playground) -> None:
         play.setup("1", "2")

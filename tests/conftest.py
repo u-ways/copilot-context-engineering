@@ -12,7 +12,8 @@ import structlog
 from typer.testing import CliRunner
 
 from cce.render import include_targets
-from tests.support.upstream import GitUpstream, SyntheticUpstream, build
+from cce.workspace import Git, GitUpstream
+from tests.support.upstream import SyntheticUpstream, build
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -54,7 +55,7 @@ def upstream(tmp_path_factory: pytest.TempPathFactory) -> SyntheticUpstream:
 @pytest.fixture
 def reader(upstream: SyntheticUpstream) -> GitUpstream:
     """An upstream reader over the synthetic repository's head."""
-    return GitUpstream(upstream.path, upstream.head)
+    return GitUpstream(Git(), upstream.path, upstream.head)
 
 
 @pytest.fixture

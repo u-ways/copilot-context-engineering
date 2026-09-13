@@ -1,9 +1,11 @@
 """Directives expand once, never re-scan included text, and fail closed (ADR-0005)."""
 
+import subprocess
 from pathlib import Path
 
 import pytest
 
+from cce.dialect import Dialect
 from cce.manifest import Manifest, parse, split_front_matter
 from cce.render import (
     IncludeTarget,
@@ -19,7 +21,8 @@ from cce.render import (
     render_text,
     residual_directives,
 )
-from tests.support.upstream import INERT_LINE, NEW_MARKER, OLD_MARKER, GitUpstream
+from cce.workspace import Git, GitUpstream
+from tests.support.upstream import INERT_LINE, NEW_MARKER, OLD_MARKER, SyntheticUpstream, run_git
 
 PROCEDURES = {
     "alpha": Procedure(1, "alpha", "Alpha", "Alpha description: first", "Alpha body\n"),
@@ -70,14 +73,9 @@ class TestInclude:
 
         assert str(raised.value).startswith("overlay.md:2:")
 
-    def test_non_utf8_upstream_text_is_an_error(self) -> None:
-        class Binary(PlaceholderUpstream):
-            def read(self, path: str) -> bytes:
-                assert path
-                return b"\xff\xfe"
-
+    def test_non_utf8_upstream_text_is_an_error(self, reader: GitUpstream) -> None:
         with pytest.raises(RenderError, match="not UTF-8"):
-            render_text("<!-- cce:include x.bin -->", Binary(), {})
+            render_text("<!-- cce:include latin1.md -->", reader, {})
 
 
 class TestProcedureDirectives:
@@ -282,6 +280,23 @@ class TestPlanScenario:
 
         with pytest.raises(RenderError, match="unknown tools teleport"):
             plan_scenario(manifest.scenarios[0], manifest, reader, root)
+
+    def test_claude_dialect_is_validated_against_upstream_too(
+        self, tmp_path: Path, upstream: SyntheticUpstream
+    ) -> None:
+        clone = tmp_path / "with-claude-md"
+        subprocess.run(["git", "clone", "-q", str(upstream.path), str(clone)], check=True)
+        (clone / "CLAUDE.md").write_text("upstream instructions\n")
+        run_git(clone, ["add", "CLAUDE.md"])
+        run_git(clone, ["-c", "user.name=t", "-c", "user.email=t@x", "commit", "-qm", "claude"])
+        head = run_git(clone, ["rev-parse", "HEAD"]).strip()
+        manifest = parse(MANIFEST)
+        scenario = manifest.scenarios[0]
+        clashing = GitUpstream(Git(), clone, head)
+
+        assert plan_scenario(scenario, manifest, clashing)  # the Copilot layout is fine
+        with pytest.raises(RenderError, match=r"CLAUDE\.md.*already exists upstream"):
+            plan_scenario(scenario, manifest, clashing, dialect=Dialect.CLAUDE)
 
     def test_destination_tracked_upstream_is_rejected(
         self, tmp_path: Path, reader: GitUpstream

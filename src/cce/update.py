@@ -108,7 +108,8 @@ def maybe_notify(
             return
         interval = int(env.get("CCE_UPDATE_INTERVAL", DEFAULT_INTERVAL_SECONDS))
         cache = cache_dir / CACHE_FILE
-        if now() - _last_checked(cache) < interval:
+        elapsed = now() - _last_checked(cache)
+        if 0 <= elapsed < interval:
             return
         cache.parent.mkdir(parents=True, exist_ok=True)
         cache.write_text(json.dumps({"checked_at": now()}), encoding="utf-8")

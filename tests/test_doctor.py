@@ -118,6 +118,20 @@ class TestHealthyMachine:
 
         assert checks["upstream"].status is Status.OK
 
+    def test_a_hanging_upstream_probe_is_a_fail_row_not_a_traceback(
+        self, tmp_path: Path, manifest: Manifest
+    ) -> None:
+        def hanging(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+            if argv[:2] == ["git", "ls-remote"]:
+                raise subprocess.TimeoutExpired(list(argv), 30)
+            return real_run(argv)
+
+        env = environment(tmp_path)
+        env = Environment(env.env, env.home, env.which, hanging, env.python_version)
+
+        check = by_name(run_checks(env, manifest, offline=False))["upstream"]
+        assert check.status is Status.FAIL and "--offline" in check.detail
+
     def test_unreachable_upstream_fails(self, tmp_path: Path) -> None:
         manifest = parse(MANIFEST_TEXT.format(url=(tmp_path / "missing").as_uri()))
 

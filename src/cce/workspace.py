@@ -10,6 +10,7 @@ scenario) describe the layout::
     <ws>/scenarios/<slug>/  worktree on branch cce/<slug>
 """
 
+import errno
 import fcntl
 import json
 import os
@@ -20,9 +21,10 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 from cce import CceError
-from cce.dialect import Dialect, translate
+from cce.dialect import Dialect
 from cce.log import get_logger
 from cce.manifest import Manifest, Scenario
 from cce.render import OVERLAYS_ROOT, PlannedFile, digest, plan_scenario
@@ -37,6 +39,9 @@ SCENARIOS_DIR = "scenarios"
 STAGING_PREFIX = ".tmp-"
 BASELINE_REF_PREFIX = "refs/cce/baseline/"
 STATE_SCHEMA = 1
+OWNED_ENTRIES = frozenset(
+    {MARKER, LOCK_FILE, STATE_FILE, f"{STATE_FILE}.tmp", BASE_DIR, SCENARIOS_DIR, "herdr.json"}
+)
 STRAY_UPSTREAM_PATHS = (
     "AGENTS.md",
     "CLAUDE.md",
@@ -60,7 +65,7 @@ _GIT_CONFIG = (
 
 log = get_logger("cce.workspace")
 
-Runner = Callable[..., subprocess.CompletedProcess[str]]
+Runner = Callable[..., subprocess.CompletedProcess[Any]]
 
 
 class Status(StrEnum):
@@ -108,14 +113,31 @@ class State:
 
     @classmethod
     def load(cls, path: Path) -> State:
+        """Read ``state.json``; an unreadable or foreign file is a refused precondition."""
         if not path.is_file():
             return cls()
-        data = json.loads(path.read_text(encoding="utf-8"))
-        records = {
-            slug: ScenarioRecord(str(item["baseline"]), str(item["digest"]), str(item["dialect"]))
-            for slug, item in data.get("scenarios", {}).items()
-        }
-        return cls(str(data.get("source_url", "")), str(data.get("source_ref", "")), records)
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise TypeError("state is not a JSON object")
+            if data.get("schema") != STATE_SCHEMA:
+                raise CceError(
+                    f"{path} was written by a different cce version (schema "
+                    f"{data.get('schema')!r}, expected {STATE_SCHEMA}); run `cce teardown --force`",
+                    exit_code=3,
+                )
+            records = {
+                slug: ScenarioRecord(
+                    str(item["baseline"]), str(item["digest"]), str(item["dialect"])
+                )
+                for slug, item in data.get("scenarios", {}).items()
+            }
+            return cls(str(data.get("source_url", "")), str(data.get("source_ref", "")), records)
+        except (OSError, ValueError, TypeError, AttributeError, KeyError) as error:
+            raise CceError(
+                f"{path} is unreadable ({error}); run `cce teardown --force` to start over",
+                exit_code=3,
+            ) from error
 
     def save(self, path: Path) -> None:
         payload = {
@@ -138,9 +160,8 @@ class Git:
     def __init__(self, runner: Runner = subprocess.run) -> None:
         self._runner = runner
 
-    def run(
-        self, args: Sequence[str], *, cwd: Path | None = None, check: bool = True
-    ) -> subprocess.CompletedProcess[str]:
+    @staticmethod
+    def _env() -> dict[str, str]:
         env = {
             "GIT_TERMINAL_PROMPT": "0",
             "LC_ALL": "C",
@@ -150,10 +171,26 @@ class Git:
         for key in ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "XDG_CONFIG_HOME"):
             if key in os.environ:
                 env[key] = os.environ[key]
+        return env
+
+    def show(self, revision: str, path: str, *, cwd: Path) -> bytes | None:
+        """``git show REV:PATH`` as raw bytes, or ``None`` when the blob does not exist."""
+        completed: subprocess.CompletedProcess[bytes] = self._runner(
+            ["git", *_GIT_CONFIG, "show", f"{revision}:{path}"],
+            cwd=cwd,
+            env=self._env(),
+            capture_output=True,
+            check=False,
+        )
+        return None if completed.returncode != 0 else completed.stdout
+
+    def run(
+        self, args: Sequence[str], *, cwd: Path | None = None, check: bool = True
+    ) -> subprocess.CompletedProcess[str]:
         completed: subprocess.CompletedProcess[str] = self._runner(
             ["git", *_GIT_CONFIG, *args],
             cwd=cwd,
-            env=env,
+            env=self._env(),
             capture_output=True,
             text=True,
             check=False,
@@ -196,10 +233,10 @@ class GitUpstream:
         return frozenset(line for line in listing.split("\n") if line)
 
     def _show(self, revision: str, path: str) -> bytes:
-        completed = self._git.run(["show", f"{revision}:{path}"], cwd=self._repository, check=False)
-        if completed.returncode != 0:
+        blob = self._git.show(revision, path, cwd=self._repository)
+        if blob is None:
             raise FileNotFoundError(f"{path} is not in {revision}")
-        return completed.stdout.encode("utf-8")
+        return blob
 
 
 class Workspace:
@@ -285,7 +322,7 @@ class Workspace:
         return [line for line in listing.stdout.split("\n") if line]
 
     def inspect_all(self) -> list[Inspection]:
-        """Every scenario's status plus overlay drift; never raises."""
+        """Every scenario's status plus overlay drift; raises only for an unreadable state file."""
         state = State.load(self.state_path)
         reader = self._reader(state.source_ref) if state.source_ref and self.base.is_dir() else None
         results: list[Inspection] = []
@@ -325,9 +362,12 @@ class Workspace:
             try:
                 fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError as error:
-                raise CceError(
-                    f"another cce command holds the workspace lock at {self.root}", exit_code=3
-                ) from error
+                if error.errno in (errno.EACCES, errno.EAGAIN):
+                    raise CceError(
+                        f"another cce command holds the workspace lock at {self.root}",
+                        exit_code=3,
+                    ) from error
+                raise CceError(f"cannot lock {self.root}: {error}") from error
             try:
                 yield
             finally:
@@ -369,12 +409,13 @@ class Workspace:
         force: bool,
         dialect: Dialect,
     ) -> list[Inspection]:
+        self._claim_root()
         with self.locked():
             state = self.ensure_base(source_url, source_ref)
             reader = self._reader(source_ref)
             plans = {
-                scenario.slug: translate(
-                    plan_scenario(scenario, self.manifest, reader, self.overlays_root), dialect
+                scenario.slug: plan_scenario(
+                    scenario, self.manifest, reader, self.overlays_root, dialect=dialect
                 )
                 for scenario in scenarios
             }
@@ -429,7 +470,16 @@ class Workspace:
                 exit_code=3,
             )
         with self.locked():
-            state = State.load(self.state_path)
+            try:
+                state = State.load(self.state_path)
+            except CceError:
+                if not force:
+                    raise CceError(
+                        f"{self.state_path} is unreadable; cannot tell which scenarios are "
+                        "modified (use --force to remove the workspace anyway)",
+                        exit_code=3,
+                    ) from None
+                state = State()
             modified = [
                 inspection.scenario.slug
                 for inspection in (self.inspect(s, state) for s in self.manifest.scenarios)
@@ -446,7 +496,8 @@ class Workspace:
                     self.git.run(
                         ["worktree", "remove", "--force", str(path)], cwd=self.base, check=False
                     )
-        self._rmtree(self.root)
+            # Removed while the lock is held: a concurrent setup cannot slip into the gap.
+            self._rmtree(self.root)
         return self.root
 
     # --- internals ---------------------------------------------------------------------
@@ -456,8 +507,20 @@ class Workspace:
 
     def _digest(self, scenario: Scenario, reader: GitUpstream, dialect: Dialect) -> str:
         return digest(
-            translate(plan_scenario(scenario, self.manifest, reader, self.overlays_root), dialect)
+            plan_scenario(scenario, self.manifest, reader, self.overlays_root, dialect=dialect)
         )
+
+    def _claim_root(self) -> None:
+        """Refuse a directory cce did not create; the marker is teardown's only gate."""
+        if self.marker.is_file() or not self.root.exists():
+            return
+        foreign = sorted(p.name for p in self.root.iterdir() if p.name not in OWNED_ENTRIES)
+        if foreign:
+            raise CceError(
+                f"{self.root} already contains files cce did not create "
+                f"({', '.join(foreign[:5])}); point --workspace at an empty directory",
+                exit_code=3,
+            )
 
     def _create(
         self,
