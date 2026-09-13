@@ -58,7 +58,7 @@ ok    upstream      https://github.com/u-ways/software-engineering-quality-frame
 Every row is `ok`, `warn` or `fail`. Fix every `fail` row before going on.
 
 > [!TIP]
-> It is okay to have global instructions. They may affect some results, but if they are not too intrusive they are fine to keep.
+> It is okay to have global instructions, hooks, agents, or skills. They may affect some results, but if they are not too intrusive they are often fine to keep.
 
 ## Isolating global instructions
 
