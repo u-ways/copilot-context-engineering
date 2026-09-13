@@ -7,6 +7,7 @@ Every collaborator that touches the machine or the network is injected:
 
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import urllib.request
@@ -19,6 +20,7 @@ import typer
 from cce import CceError, __version__
 from cce.log import get_logger
 
+REPOSITORY_URL = "https://github.com/u-ways/copilot-context-engineering"
 RELEASES_LATEST_URL = (
     "https://api.github.com/repos/u-ways/copilot-context-engineering/releases/latest"
 )
@@ -62,6 +64,16 @@ def default_run(argv: Sequence[str]) -> int:
 def default_confirm(question: str) -> bool:
     """The only prompt in ``cce``: a Y/n question on stderr, defaulting to yes."""
     return typer.confirm(question, default=True, err=True)
+
+
+def install_argv(tag: str) -> list[str]:
+    """The ``uv`` command that installs exactly the release ``tag``.
+
+    ``uv tool upgrade`` is a no-op for an install pinned to a tag and moves an
+    unpinned install to the head of ``main``; a forced install of the announced tag
+    lands the same version for both.
+    """
+    return ["uv", "tool", "install", "--force", f"{TOOL_NAME} @ git+{REPOSITORY_URL}@{tag}"]
 
 
 def parse_version(tag: str) -> tuple[int, int, int] | None:
@@ -120,7 +132,7 @@ def maybe_notify(
         if is_tty() and confirm(
             f"cce {latest.tag} is available (you have {current}). Upgrade now?"
         ):
-            run(["uv", "tool", "upgrade", TOOL_NAME])
+            run(install_argv(latest.tag))
         elif not is_tty():
             log.warning(
                 "a newer cce is available",
@@ -141,22 +153,20 @@ def update(
     check_only: bool,
     current: str = __version__,
 ) -> tuple[str, Latest | None, bool]:
-    """Report the latest release and, unless ``check_only``, upgrade when it is newer.
+    """Report the latest release and, unless ``check_only``, install it when it is newer.
 
     Returns ``(current, latest, upgraded)``.
     """
     latest = fetch_latest(fetch, releases_url(env))
     installed = parse_version(current)
-    newer = latest is not None and installed is not None and latest.version > installed
-    if check_only or not newer:
+    if check_only or latest is None or installed is None or latest.version <= installed:
         return current, latest, False
+    argv = install_argv(latest.tag)
     if which("uv") is None:
-        raise CceError(
-            "uv is not on PATH; install uv and run `uv tool upgrade " + TOOL_NAME + "`", exit_code=3
-        )
-    code = run(["uv", "tool", "upgrade", TOOL_NAME])
+        raise CceError(f"uv is not on PATH; install uv and run `{shlex.join(argv)}`", exit_code=3)
+    code = run(argv)
     if code != 0:
-        raise CceError(f"uv tool upgrade {TOOL_NAME} failed with exit code {code}")
+        raise CceError(f"`{shlex.join(argv)}` failed with exit code {code}")
     return current, latest, True
 
 

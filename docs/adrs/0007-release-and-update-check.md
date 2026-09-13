@@ -4,6 +4,7 @@
 - Date: 2026-09-13
 - Revision 2026-09-13: a `checked_at` in the future (a wrong clock, a restored cache) no longer disables the check; only an elapsed time between zero and the interval throttles it.
 - Revision 2026-09-13: the prompt is reachable only when stdin, stdout and stderr are all TTYs, so `cd "$(cce path N)"` and piped guide tabs never block on it.
+- Revision 2026-09-13: upgrading runs `uv tool install --force "copilot-context-engineering @ git+<repository>@vX.Y.Z"` with the announced tag instead of `uv tool upgrade`, which is a no-op for an install pinned to a tag (it reported success while the binary stayed at the old version) and moves an unpinned install to the head of `main` rather than to the release.
 - Revision 2026-09-13: `cce update [--check]`, the result-callback wiring and the `CCE_RELEASES_URL` override (a `file://` or https URL used by tests and forks instead of the GitHub API) land with `src/cce/update.py`.
 
 ## Context
@@ -26,9 +27,9 @@
   - is skipped entirely when `CCE_DISABLE_UPDATE_CHECK` or `CI` is set;
   - calls the GitHub `releases/latest` API (`RELEASES_LATEST_URL`, a module constant) through an injectable fetcher callable with a 3-second timeout; tests inject a fake fetcher and never touch the network;
   - compares the response's `tag_name` (`vX.Y.Z` or `X.Y.Z`) with `cce.__version__`;
-  - when a newer version exists and stdin, stdout and stderr are all TTYs, prompts `Y/n` and on confirmation runs `uv tool upgrade copilot-context-engineering`; when not a TTY, prints one notice on stderr;
+  - when a newer version exists and stdin, stdout and stderr are all TTYs, prompts `Y/n` and on confirmation runs `uv tool install --force "copilot-context-engineering @ git+https://github.com/u-ways/copilot-context-engineering@vX.Y.Z"` with the announced tag (`install_argv` in `update.py` is the only place that command is built); when not a TTY, prints one notice on stderr;
   - wraps its whole body in a top-level `except Exception` that logs at debug level, so the command's exit code never changes (raising fetcher, malformed JSON, a 404 before the first release, an unwritable cache).
-- `cce update [--check]` fetches the same endpoint, prints the current and latest versions and, unless `--check` is given, runs `uv tool upgrade copilot-context-engineering` when the release is newer (uv missing exits 3, a failed upgrade exits 1). `CCE_RELEASES_URL` overrides the endpoint for tests and forks.
+- `cce update [--check]` fetches the same endpoint, prints the current and latest versions and, unless `--check` is given, runs the same forced install of the announced tag when the release is newer (uv missing exits 3 and the message carries the install line, a failed install exits 1). `CCE_RELEASES_URL` overrides the endpoint for tests and forks.
 
 ## Consequences
 
@@ -37,7 +38,7 @@
 - Forgetting one of the two version files fails the test suite locally and in CI, and fails the drafter if it somehow reaches `main`.
 - Users learn about a release within a day of their next `cce` invocation, and no command ever fails or slows by more than 3 seconds because of the check.
 - `releases/latest` returns 404 until the first release is published; the check treats that as "no update".
-- A `git+https` install without a ref tracks `main`, so an upgrade may land a commit at or after the announced tag; `docs/RELEASING.md` documents the pinned `@vX.Y.Z` install line for readers who want exactly the tag.
+- Every upgrade installs exactly the announced tag, whether the original install was pinned to a tag or tracked `main`; after the first `cce update` the tool is pinned to that tag until the next release moves it on. `docs/RELEASING.md` documents the same install line for readers who want a specific release by hand.
 
 ## Review guidance
 
@@ -48,3 +49,4 @@
 - Flag HTTP client use (`urllib.request`, `http.client`, `httpx`, `requests`, `aiohttp`) in `src/cce` outside the injectable fetcher in `update.py`.
 - Flag an update-check code path in `update.py` that is not enclosed by a top-level `except Exception`.
 - Flag `uv build`, wheel or sdist uploads, or PyPI steps in any workflow.
+- Flag `uv tool upgrade` in `src/cce`; require the upgrade command to install the release tag returned by the check.

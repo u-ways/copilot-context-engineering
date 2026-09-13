@@ -12,10 +12,12 @@ from cce import CceError
 from cce.cli import app, default_cache_dir
 from cce.update import (
     RELEASES_LATEST_URL,
+    REPOSITORY_URL,
     TOOL_NAME,
     Latest,
     default_fetch,
     fetch_latest,
+    install_argv,
     maybe_notify,
     parse_version,
     releases_url,
@@ -124,14 +126,14 @@ class TestSkips:
 
 
 class TestNotification:
-    def test_prompts_on_a_tty_and_upgrades_on_yes(self, tmp_path: Path) -> None:
+    def test_prompts_on_a_tty_and_installs_the_announced_tag_on_yes(self, tmp_path: Path) -> None:
         recorder = Recorder()
 
         recorder.notify(tmp_path)
 
         assert recorder.fetched == [RELEASES_LATEST_URL]
         assert recorder.questions == ["cce v9.9.9 is available (you have 0.1.0). Upgrade now?"]
-        assert recorder.commands == [["uv", "tool", "upgrade", TOOL_NAME]]
+        assert recorder.commands == [install_argv("v9.9.9")]
 
     def test_declining_runs_nothing(self, tmp_path: Path) -> None:
         recorder = Recorder()
@@ -209,6 +211,15 @@ class TestHelpers:
     ) -> None:
         assert fetch_latest(default_fetch, release_file("v2.0.0")) == Latest("v2.0.0", (2, 0, 0))
 
+    def test_install_argv_forces_an_install_of_exactly_the_tag(self) -> None:
+        assert install_argv("v1.2.3") == [
+            "uv",
+            "tool",
+            "install",
+            "--force",
+            f"{TOOL_NAME} @ git+{REPOSITORY_URL}@v1.2.3",
+        ]
+
     def test_releases_url_defaults_to_the_github_api(self) -> None:
         assert releases_url({}) == RELEASES_LATEST_URL
         assert releases_url({"CCE_RELEASES_URL": "file:///x"}) == "file:///x"
@@ -228,13 +239,16 @@ class TestUpdateFunction:
 
         assert (current, latest, upgraded) == (cce.__version__, Latest("v9.0.0", (9, 0, 0)), False)
 
-    def test_missing_uv_is_a_refused_precondition(self, release_file: Callable[[str], str]) -> None:
+    def test_missing_uv_is_a_refused_precondition_naming_the_install_line(
+        self, release_file: Callable[[str], str]
+    ) -> None:
         env = {"CCE_RELEASES_URL": release_file("v9.0.0")}
 
         with pytest.raises(CceError) as raised:
             update(env=env, check_only=False, which=lambda _: None)
 
         assert raised.value.exit_code == 3
+        assert f"@v9.0.0" in str(raised.value)
 
     def test_failed_upgrade_is_a_runtime_failure(self, release_file: Callable[[str], str]) -> None:
         env = {"CCE_RELEASES_URL": release_file("v9.0.0")}
@@ -246,7 +260,7 @@ class TestUpdateFunction:
 
 
 class TestUpdateCommand:
-    def test_upgrades_through_uv_on_path(
+    def test_installs_the_announced_tag_through_uv_on_path(
         self,
         cli: CliRunner,
         monkeypatch: pytest.MonkeyPatch,
@@ -265,7 +279,7 @@ class TestUpdateCommand:
         assert (
             result.stdout == f"cce {cce.__version__} (latest release: v9.0.0)\nupgraded to v9.0.0\n"
         )
-        assert json.loads(log.read_text()) == ["tool", "upgrade", TOOL_NAME]
+        assert json.loads(log.read_text()) == install_argv("v9.0.0")[1:]
 
     def test_check_only_prints_versions(
         self, cli: CliRunner, monkeypatch: pytest.MonkeyPatch, release_file: Callable[[str], str]
