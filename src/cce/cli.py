@@ -186,7 +186,12 @@ def setup(
     scenarios = manifest_module.resolve_ids(manifest, ids or [])
     client = herdr_module.Herdr()
     if herdr:
-        herdr_module.preflight(os.environ, shutil.which, client, [])
+        # Labels depend only on the requested scenarios, so the collision check
+        # runs before any worktree or herdr mutation (ADR-0008).
+        planned = herdr_module.plan_layout(
+            manifest, workspace.root, {s.slug: workspace.path_for(s) for s in scenarios}, {}
+        )
+        herdr_module.preflight(os.environ, shutil.which, client, planned)
     results = workspace.setup(
         scenarios,
         source_url=source_url or manifest.source_url,
@@ -203,7 +208,6 @@ def setup(
             {row.scenario.slug: row.path for row in results if row.status is Status.READY},
             {row.scenario.slug: workspace.overlay_files(row.scenario) for row in results},
         )
-        herdr_module.preflight(os.environ, shutil.which, client, layout)
         created = herdr_module.apply_layout(client, layout, workspace.root / HERDR_RECORD)
         typer.echo(f"herdr: created {len(created)} workspaces")
 
