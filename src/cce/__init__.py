@@ -5,7 +5,7 @@ repository and overlays Copilot customisation files, so that anyone can explore
 when to use repository instructions, Agent Skills or custom agents.
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 
 class CceError(Exception):
