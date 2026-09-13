@@ -4,47 +4,83 @@
 
 The eight procedures that scenario 02 inlined into its instructions are packaged here as Agent Skills under `.github/skills/<name>/SKILL.md`, one per procedure, derived from the same sources. The instructions shrink to a few lines saying that the procedures exist as skills and to consult one only when the task matches its description.
 
-Copilot reads only each skill's front matter (name and description) at start-up. A body enters the context only when a task matches its description. Every procedure ends with a tracer line, `procedure: <name>`, so a load is usually visible in the reply as well as in `/skills`; if a model omits the line, `/skills` is still the proof.
+Copilot reads only each skill's front matter (name and description) at start-up. A body enters the context only when the model decides a task matches a description and calls the skill; that call shows in the transcript as `● skill(<name>)`. Every procedure ends with a tracer line, `procedure: <name>`, so a load is usually visible in the reply as well.
 
-Two prompts: a lookup that matches nothing, and a page-conversion task that matches exactly one skill.
+You will send two prompts in two fresh sessions: a lookup that matches nothing, and a page-conversion task that matches exactly one skill.
 
 ## Run it
 
-Observation protocol for every prompt: start a fresh Copilot session in the worktree, type `/context` before the prompt, send the prompt, then `/context`, `/usage`, `/skills` and `/diff` (or `git status --porcelain`). Personal skills and agents from `~/.copilot` may appear in `/skills`; `cce doctor` warns about them.
+Before you start: the [setup](../PREREQUISITES.md) is done and `cce list` shows scenario 03 as `ready`. Keep a second terminal in the worktree (`cd "$(cce path 3)"`).
 
-```sh
-cce reset 3 && cd "$(cce path 3)" && copilot
-```
+Record what you see as you go:
 
-### Prompt A: the lookup from scenario 02
+| Run | `/context` at turn 0 → after | AI credits (≈ $) | `● skill(...)` line? | `procedure:` line in the reply? |
+| --- | --- | --- | --- | --- |
+| A, the lookup | | | | |
+| B, the conversion plan | | | | |
 
-```text
-In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
-```
+### Run A: the lookup from scenario 02
 
-### Prompt B: a task that matches a skill
+1. **Start** a fresh session from the baseline (answer `1. Yes` to the folder-trust question the first time):
 
-Start a fresh session, then send:
+   ```sh
+   cce reset 3 && cd "$(cce path 3)" && copilot --allow-all --model claude-sonnet-5
+   ```
 
-```text
-Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
-```
+2. **Check**: `/context` starts around 21k; the `System Prompt` line holds the short instructions and the eight skill descriptions. `/skills` lists the eight repository skills with their descriptions; read them, because they are what the model matches the prompt against (Esc to close).
+
+3. **Send**:
+
+   ```text
+   In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
+   ```
+
+4. **Observe**: expect 28, cited at `insights/metrics.md:24` and `:33`, no `● skill(...)` line, no `procedure:` line, and `/context` barely changed. `git status --porcelain` prints nothing.
+
+5. **Quit and reset**: `/exit`, then `cce reset 3`.
+
+### Run B: a task that matches a skill
+
+1. **Start** a fresh session:
+
+   ```sh
+   cce reset 3 && cd "$(cce path 3)" && copilot --allow-all --model claude-sonnet-5
+   ```
+
+2. **Check**: `/context` at turn 0 again; it should match run A's.
+
+3. **Send**:
+
+   ```text
+   Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
+   ```
+
+4. **Observe**: expect a thought along the lines of "this task matches the convert-page-to-framework-conventions skill", then the line
+
+   ```text
+   ● skill(convert-page-to-framework-conventions)
+   ```
+
+   and a plan whose last line is `procedure: convert-page-to-framework-conventions`. `/context` grows by roughly that one body (about 10k tokens in `Messages`; the file is 27 KB, `wc -c .github/skills/convert-page-to-framework-conventions/SKILL.md`). Check the plan against the page with `cat -n tools/aws-fis/jmeter/README.md` in the shell; the checklist is in the next section. `git status --porcelain` prints nothing: the prompt asked for a plan only.
+
+5. **Quit and reset**: `/exit`, then `cce reset 3`.
 
 ## What to notice
 
-Prompt A: the answer is 28 at `insights/metrics.md:24` or `:33` (`grep -n '28 days' insights/metrics.md`); no skill loads; no `procedure:` line; `/context` stays small.
+What must hold on every run: run A loads no skill, run B loads exactly one, and neither changes a file. The plan's wording varies; its coverage of the checklist below is what to judge.
 
-Prompt B: `/skills` shows `convert-page-to-framework-conventions` loaded and nothing else, `/context` grows by that one body, and the reply ends with:
+Measured on Claude Sonnet 5:
 
-```text
-procedure: convert-page-to-framework-conventions
-```
+| Run | `/context` turn 0 → after | `/usage` Tokens ↑ | AI credits (≈ $) | Loaded |
+| --- | --- | --- | --- | --- |
+| A, the lookup | 21k → 22k | 84.4k | 4.38 (≈ $0.04) | nothing |
+| B, the conversion plan | 21k → 32k | 182.5k | 14.9 (≈ $0.15) | `convert-page-to-framework-conventions` |
 
-A good plan covers the points below, each checkable against the target page (`cat -n tools/aws-fis/jmeter/README.md`):
+A good plan covers these points, each checkable against the page:
 
 - Add an H1 (MD041): the page has none.
 - Split the content under level-2 headings and, since there will be two or more, add a bulleted table of contents with anchors.
-- Add a `## Context` section that opens with the framework's cross-reference line. The page sits three directories deep, so the link must resolve to `../../../principles.md`. A plan with two levels is the likely miss.
+- Add a `## Context` section that opens with the framework's cross-reference line. The page sits three directories deep, so the link must resolve to `../../../principles.md`; the measured plan worked that out explicitly.
 - Turn the two bare URLs on lines 5 and 9 into Markdown links (MD034).
 - Give the three code fences a language (MD040) and surround them with blank lines (MD031).
 - Remove the trailing whitespace on lines 1 and 34 (MD009).
@@ -63,9 +99,17 @@ grep -n -i -w master tools/aws-fis/jmeter/*.sh         # the sibling scripts
 grep -n MD013 scripts/markdown-check-format.sh         # line 21
 ```
 
-`git status --porcelain` is empty after both prompts.
+Compare run A with scenario 02's run (a): the same eight procedures, and the lookup that cost 35 credits there costs 4 here. Run B paid for one body, once, in the session that needed it.
 
 The lesson: a skill costs its front matter until it is matched, then exactly its body, and only in the session that needed it. The same text in instructions (scenario 02) is paid by every request.
+
+### Impact in numbers
+
+Rough figures from the measured runs (percentages are rounded):
+
+- Unmatched task: the lookup cost about 87% less than the same lookup with every procedure inlined (4.38 against scenario 02's 35.02). Eight skills sat available for the price of their descriptions, about 1k tokens of system prompt.
+- Matched task: loading one skill added about 10k tokens to the context (21k to 32k, roughly 50% larger) and the session cost 14.9 credits. Even that run, which did real work with a procedure, cost about 57% less than scenario 02's trivial lookup with all eight inlined.
+- Scope of the cost: one body, in one session. The other seven procedures cost nothing, and a fresh session starts at 21k again.
 
 ## Reset
 

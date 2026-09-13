@@ -1,45 +1,40 @@
-# copilot-context-engineering
+# Copilot Context-Engineering
 
-Should a rule go into repository instructions, an Agent Skill, or a custom agent? This repository answers that question for GitHub Copilot CLI by letting you run it. The `cce` command prepares six scenarios on top of a real public engineering framework. Each scenario is a git worktree with a small, deliberate set of Copilot customisation files and a short guide, so you can send the same prompt under different set-ups and watch what changes in `/context`, `/usage` and `/diff`.
+_Should an agent rule go into repository instructions, an agent skill, or a custom subagent?_
 
-## Which should I use?
+## Background
 
-| | Instructions | Skill | Agent |
-| --- | --- | --- | --- |
-| Always loaded? | Yes | No, only when relevant | No, dispatched |
-| Adaptive? | No, static text | Yes | Yes |
-| Size concern? | Paid on every request | Only when matched | Separate context |
-| Can you restrict its tools? | No | No | Yes, a per-role `tools` list (scenario 05) |
+![Cost Rate Limits Meme](docs/imgs/cost_rate_limits_meme.jpeg)
 
-TL;DR: Instructions = "Always follow these rules." Skill = "When doing X, here is how." Agent = "Go do this and come back."
+There will come a time when your employer says no to _"[Tokenmaxxing](https://www.ibm.com/think/insights/tokenmaxxing-dead-long-live-valuemaxxing)"_.
 
-## What you will see
+Because _"use as much AI as possible"_ without clearly defining success metrics, guardrails or cost expectations was never a value exercise; it was a learning experience.
 
-| # | Scenario | Lesson | Guide |
-| --- | --- | --- | --- |
-| 01 | instructions-timeless | Instructions hold durable rules, not changing repo state | [01-instructions-timeless.md](docs/scenarios/01-instructions-timeless.md) |
-| 02 | instructions-context-cost | Task runbooks in instructions are paid on every request | [02-instructions-context-cost.md](docs/scenarios/02-instructions-context-cost.md) |
-| 03 | skills-on-demand | The same procedures as skills cost nothing until matched | [03-skills-on-demand.md](docs/scenarios/03-skills-on-demand.md) |
-| 04 | skills-description-routing | Descriptions route skills | [04-skills-description-routing.md](docs/scenarios/04-skills-description-routing.md) |
-| 05 | agent-permissions | Permissions belong to the role | [05-agent-permissions.md](docs/scenarios/05-agent-permissions.md) |
-| 06 | agent-context-isolation | Delegate when you need the result, not the investigation | [06-agent-context-isolation.md](docs/scenarios/06-agent-context-isolation.md) |
+However, once some of those cost guardrails are set, what happens next is a bunch of developers scrambling to amend or fix various AI instructions that were once "acceptable" but are now leaving them with very little usage allowance within the first few hours of the month. What next?
 
-Every scenario takes a few minutes, shows its numbers in Copilot's own `/context` and `/usage` output, and ends with a reset.
+Luckily for us, the industry caught this problem long ago, and we now have various ways to optimise the context window to reduce cost and maximise output value. You just need to watch several talks, read several more articles, dig into the docs, and then hopefully, once your thoughts are in place, apply the learnings.
+
+...or you can install and follow this interactive guide, which aims to give you a practical guide that looks into bad (and common!) usage patterns and suggests a better way to handle them.
+
+## Who is this for?
+
+Heavy Copilot users: the people who feel the usage limits.
+
+> [!IMPORTANT]
+> Your first priority should be finding value in agentic AI.
+> If Copilot is producing no value for you, **there is nothing to optimise** yet.
+
+This is not for people who are new to Copilot or have never used it. Some of these lessons might be useful to know in advance, but they won't stick if applied prematurely. Come back once you start hitting your usage limits and wondering how to make your tokens stretch further.
 
 ## Get started
 
-1. Follow [docs/PREREQUISITES.md](docs/PREREQUISITES.md) to install `cce` and check your machine.
-2. Run `cce setup` once, then open the [walkthrough](docs/scenarios/README.md).
+1. Start with [docs/PREREQUISITES.md](docs/PREREQUISITES.md) to install the tool and health-check your machine.
+2. Follow the [docs/scenarios/README.md](docs/scenarios/README.md) walkthrough to start your visual learning journey.
 
-## Documentation
+If you're interested in a summary table to check whether anything piques your interest, see [docs/SUMMARY.md](docs/SUMMARY.md).
 
-- [Walkthrough](docs/scenarios/README.md): the six scenarios in order, and the protocol shared by every run
-- [Prerequisites](docs/PREREQUISITES.md): requirements, install, `cce doctor` and the workspace
-- [Presenting](docs/presenting.md): running the scenarios as a talk, with an optional herdr layout
-- [Contributing](CONTRIBUTING.md): how the tool works inside, exit codes and the development recipes
-- [Decisions](docs/adrs/README.md): the ADRs behind every command; they win over every other document
-- [Releasing](docs/RELEASING.md): how a release is cut and how `cce update` finds it
+## Licence & Contributing
 
-## Licence
+The project is MIT licensed; see [LICENSE](LICENSE).
 
-MIT, see [LICENSE](LICENSE). The upstream framework content is fetched at runtime at a pinned commit and is not redistributed here.
+If you find any issues, or you would like to improve the guide, please read the [CONTRIBUTING](CONTRIBUTING.md) guidelines. Improvements are highly welcome and appreciated.

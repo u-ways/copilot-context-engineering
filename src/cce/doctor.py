@@ -1,10 +1,11 @@
 """Environment checks behind ``cce doctor`` (ADR-0006).
 
-Every collaborator that touches the machine is injected through
-:class:`Environment`, so tests use a fake ``which`` and a real ``git``.
+The checks are for the person running the scenarios, not for developers or
+presenters: nothing here reports on Claude Code or herdr. Every collaborator that
+touches the machine is injected through :class:`Environment`, so tests use a fake
+``which`` and a real ``git``.
 """
 
-import json
 import os
 import re
 import shutil
@@ -38,12 +39,19 @@ class Check:
     name: str
     status: Status
     detail: str
+    details: tuple[str, ...] = ()
+    """One line per item behind the row, printed by ``--verbose`` and carried by ``--json``."""
 
     def as_row(self) -> str:
         return f"{self.status:<4}  {self.name:<12}  {self.detail}"
 
-    def as_dict(self) -> dict[str, str]:
-        return {"name": self.name, "status": str(self.status), "detail": self.detail}
+    def as_dict(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "status": str(self.status),
+            "detail": self.detail,
+            "details": list(self.details),
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,26 +77,15 @@ class Environment:
 
 def run_checks(environment: Environment, manifest: Manifest, *, offline: bool) -> list[Check]:
     """Run every check and return them in display order."""
-    checks = [
+    return [
         _python(environment),
         _git(environment),
         _copilot(environment),
-        _tool(
-            environment,
-            "claude",
-            missing=Status.OK,
-            hint="optional; only the Claude dialect uses it",
-        ),
         _tool(environment, "uv", missing=Status.WARN, hint="needed by cce update"),
+        _personal_customisation(environment),
+        _overlays(manifest),
+        _upstream(environment, manifest, offline=offline),
     ]
-    if environment.env.get("HERDR_ENV") == "1":
-        checks.append(
-            _tool(environment, "herdr", missing=Status.WARN, hint="presenter mode needs it")
-        )
-    checks.append(_personal_customisation(environment))
-    checks.append(_overlays(manifest))
-    checks.append(_upstream(environment, manifest, offline=offline))
-    return checks
 
 
 def has_failures(checks: Sequence[Check]) -> bool:
@@ -152,48 +149,54 @@ def _tool(environment: Environment, name: str, *, missing: Status, hint: str) ->
     return Check(name, Status.OK, location)
 
 
-_PERSONAL_PATHS = (
-    ".copilot/skills",
-    ".copilot/agents",
-    ".copilot/hooks",
-    ".copilot/copilot-instructions.md",
-    ".claude/skills",
-)
+_PERSONAL_ITEMS = ("copilot-instructions.md", "skills", "agents", "hooks")
+_LISTING_LIMIT = 50
+
+
+def copilot_home(environment: Environment) -> Path:
+    """Where Copilot keeps its global customisation: ``$COPILOT_HOME``, else ``~/.copilot``."""
+    configured = environment.env.get("COPILOT_HOME")
+    return Path(configured) if configured else environment.home / ".copilot"
 
 
 def _personal_customisation(environment: Environment) -> Check:
-    found = [
-        relative
-        for relative in _PERSONAL_PATHS
-        if _exists_and_not_empty(environment.home / relative)
-    ]
-    if _has_claude_hooks(environment.home / ".claude" / "settings.json"):
-        found.append(".claude/settings.json hooks")
+    root = copilot_home(environment)
+    label = "$COPILOT_HOME" if environment.env.get("COPILOT_HOME") else "~/.copilot"
+    found = [item for item in _PERSONAL_ITEMS if _exists_and_not_empty(root / item)]
     if not found:
-        return Check("personal", Status.OK, "no personal skills, agents, hooks or instructions")
+        return Check(
+            "personal", Status.OK, f"no global instructions, skills, agents or hooks under {label}"
+        )
     return Check(
         "personal",
         Status.WARN,
-        "may skew scenario results: "
-        + ", ".join("~/" + item for item in found)
-        + " (docs/presenting.md explains how to isolate them)",
+        "global instructions may skew scenario results: "
+        + ", ".join(f"{label}/{item}" for item in found)
+        + " (use --verbose to see the full list)",
+        tuple(_listing(root, found)),
     )
+
+
+def _listing(root: Path, found: Sequence[str]) -> list[str]:
+    """Every file behind the personal row, relative to Copilot's home."""
+    files: list[str] = []
+    for item in found:
+        path = root / item
+        if path.is_file():
+            files.append(item)
+            continue
+        files.extend(
+            str(child.relative_to(root)) for child in sorted(path.rglob("*")) if child.is_file()
+        )
+    if len(files) > _LISTING_LIMIT:
+        files = [*files[:_LISTING_LIMIT], f"... and {len(files) - _LISTING_LIMIT} more"]
+    return files
 
 
 def _exists_and_not_empty(path: Path) -> bool:
     if path.is_dir():
         return any(path.iterdir())
     return path.is_file()
-
-
-def _has_claude_hooks(settings: Path) -> bool:
-    if not settings.is_file():
-        return False
-    try:
-        data = json.loads(settings.read_text(encoding="utf-8"))
-    except OSError, ValueError:
-        return False
-    return isinstance(data, dict) and bool(data.get("hooks"))
 
 
 def _overlays(manifest: Manifest) -> Check:

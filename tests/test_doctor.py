@@ -1,6 +1,5 @@
 """Doctor reports the machine state without ever raising (ADR-0006)."""
 
-import json
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
@@ -32,7 +31,7 @@ def real_run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
 def environment(
     tmp_path: Path,
     *,
-    tools: Sequence[str] = ("git", "copilot", "claude", "uv", "herdr"),
+    tools: Sequence[str] = ("git", "copilot", "uv"),
     env: dict[str, str] | None = None,
     python: tuple[int, int, int] = (3, 14, 7),
 ) -> Environment:
@@ -83,7 +82,6 @@ class TestHealthyMachine:
             "python": Status.OK,
             "git": Status.OK,
             "copilot": Status.OK,
-            "claude": Status.OK,
             "uv": Status.OK,
             "personal": Status.OK,
             "overlays": Status.OK,
@@ -185,15 +183,20 @@ class TestCopilotVersion:
 
 
 class TestMissingTools:
-    def test_missing_copilot_and_uv_warn_but_missing_claude_is_fine(
-        self, tmp_path: Path, manifest: Manifest
-    ) -> None:
+    def test_missing_copilot_and_uv_warn(self, tmp_path: Path, manifest: Manifest) -> None:
         checks = by_name(run_checks(environment(tmp_path, tools=["git"]), manifest, offline=True))
 
         assert checks["copilot"].status is Status.WARN
         assert checks["uv"].status is Status.WARN
-        assert checks["claude"].status is Status.OK
-        assert "optional" in checks["claude"].detail
+
+    def test_developer_and_presenter_tools_are_not_reported(
+        self, tmp_path: Path, manifest: Manifest
+    ) -> None:
+        env = environment(tmp_path, tools=["git", "claude", "herdr"], env={"HERDR_ENV": "1"})
+
+        names = {check.name for check in run_checks(env, manifest, offline=True)}
+
+        assert "claude" not in names and "herdr" not in names
 
     def test_missing_git_fails(self, tmp_path: Path, manifest: Manifest) -> None:
         checks = by_name(run_checks(environment(tmp_path, tools=[]), manifest, offline=True))
@@ -228,46 +231,67 @@ class TestMissingTools:
         assert checks["python"].status is Status.FAIL
 
 
-class TestHerdr:
-    def test_checked_only_when_herdr_env_is_set(self, tmp_path: Path, manifest: Manifest) -> None:
-        without = by_name(run_checks(environment(tmp_path), manifest, offline=True))
-        with_env = by_name(
-            run_checks(environment(tmp_path, env={"HERDR_ENV": "1"}), manifest, offline=True)
-        )
-
-        assert "herdr" not in without
-        assert with_env["herdr"].status is Status.OK
-
-    def test_missing_herdr_warns_when_requested(self, tmp_path: Path, manifest: Manifest) -> None:
-        env = environment(tmp_path, tools=["git"], env={"HERDR_ENV": "1"})
-
-        assert by_name(run_checks(env, manifest, offline=True))["herdr"].status is Status.WARN
-
-
 class TestPersonalCustomisation:
-    def test_personal_skills_and_hooks_warn(self, tmp_path: Path, manifest: Manifest) -> None:
+    def test_global_instructions_warn_and_list_every_file(
+        self, tmp_path: Path, manifest: Manifest
+    ) -> None:
         env = environment(tmp_path)
         (env.home / ".copilot" / "skills" / "mine").mkdir(parents=True)
         (env.home / ".copilot" / "skills" / "mine" / "SKILL.md").write_text("x")
-        (env.home / ".claude").mkdir()
-        (env.home / ".claude" / "settings.json").write_text(json.dumps({"hooks": {"Stop": []}}))
+        (env.home / ".copilot" / "hooks").mkdir()
+        (env.home / ".copilot" / "hooks" / "stop.json").write_text("{}")
+        (env.home / ".copilot" / "copilot-instructions.md").write_text("be terse\n")
 
         check = by_name(run_checks(env, manifest, offline=True))["personal"]
 
         assert check.status is Status.WARN
-        assert "~/.copilot/skills" in check.detail
-        assert "settings.json hooks" in check.detail
-        assert "docs/presenting.md" in check.detail
+        assert check.detail.startswith("global instructions may skew scenario results: ")
+        assert (
+            "~/.copilot/copilot-instructions.md, ~/.copilot/skills, ~/.copilot/hooks"
+            in check.detail
+        )
+        assert "use --verbose to see the full list" in check.detail
+        assert check.details == (
+            "copilot-instructions.md",
+            "skills/mine/SKILL.md",
+            "hooks/stop.json",
+        )
 
-    def test_empty_directories_and_hookless_settings_are_fine(
+    def test_copilot_home_is_honoured_and_claude_is_ignored(
         self, tmp_path: Path, manifest: Manifest
     ) -> None:
+        scratch = tmp_path / "scratch-home"
+        env = environment(tmp_path, env={"COPILOT_HOME": str(scratch)})
+        (env.home / ".copilot" / "skills" / "mine").mkdir(parents=True)
+        (env.home / ".copilot" / "skills" / "mine" / "SKILL.md").write_text("x")
+        (env.home / ".claude" / "skills" / "theirs").mkdir(parents=True)
+        (env.home / ".claude" / "skills" / "theirs" / "SKILL.md").write_text("y")
+
+        check = by_name(run_checks(env, manifest, offline=True))["personal"]
+        assert check.status is Status.OK and "$COPILOT_HOME" in check.detail
+
+        (scratch / "agents").mkdir(parents=True)
+        (scratch / "agents" / "a.agent.md").write_text("z")
+        check = by_name(run_checks(env, manifest, offline=True))["personal"]
+        assert check.status is Status.WARN and "$COPILOT_HOME/agents" in check.detail
+        assert check.details == ("agents/a.agent.md",)
+
+    def test_empty_directories_are_fine(self, tmp_path: Path, manifest: Manifest) -> None:
         env = environment(tmp_path)
         (env.home / ".copilot" / "agents").mkdir(parents=True)
-        (env.home / ".claude").mkdir()
-        (env.home / ".claude" / "settings.json").write_text("not json")
 
         assert by_name(run_checks(env, manifest, offline=True))["personal"].status is Status.OK
+
+    def test_long_listings_are_capped(self, tmp_path: Path, manifest: Manifest) -> None:
+        env = environment(tmp_path)
+        hooks = env.home / ".copilot" / "hooks"
+        hooks.mkdir(parents=True)
+        for index in range(60):
+            (hooks / f"{index:02}.json").write_text("{}")
+
+        check = by_name(run_checks(env, manifest, offline=True))["personal"]
+
+        assert len(check.details) == 51 and check.details[-1] == "... and 10 more"
 
 
 class TestPresentation:
@@ -275,7 +299,12 @@ class TestPresentation:
         check = Check("git", Status.OK, "git version 2.50.0")
 
         assert check.as_row() == "ok    git           git version 2.50.0"
-        assert check.as_dict() == {"name": "git", "status": "ok", "detail": "git version 2.50.0"}
+        assert check.as_dict() == {
+            "name": "git",
+            "status": "ok",
+            "detail": "git version 2.50.0",
+            "details": [],
+        }
 
     def test_from_system_uses_the_running_interpreter(self) -> None:
         env = Environment.from_system({"HOME": "/nowhere"})

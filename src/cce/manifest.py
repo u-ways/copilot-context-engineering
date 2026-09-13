@@ -470,7 +470,7 @@ def guide_path(manifest: Manifest, token: str, root: Path | None = None) -> Path
     base = root if root is not None else guides_root()
     packaged = base.name == "guides"
     if token == PRESENTING:
-        return base / "presenting.md"
+        return base / "presenting.md" if packaged else base / "slides" / "presenting.md"
     if token == SCENARIOS_INDEX:
         return (base if packaged else base / "scenarios") / "README.md"
     scenario = resolve_ids(manifest, [token])[0]

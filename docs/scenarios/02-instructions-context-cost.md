@@ -2,59 +2,105 @@
 
 ## What it shows
 
-This scenario's `.github/copilot-instructions.md` inlines all eight framework procedures, about 404 KB of upstream text rendered at setup time, under a header that declares every procedure policy to be read before any task. Copilot CLI loads the file in full: in one measured run through the non-interactive `copilot -p` runner (Copilot CLI 1.0.83, the default model) a one-line reply cost 100,756 input tokens; `just llm copilot` re-measures it. Claude Code 2.1.270 is a second data point for the same lookup: 147,581 input tokens here against 19,461 in scenario 03.
+This scenario's `.github/copilot-instructions.md` inlines all eight framework procedures, about 413 KB of upstream text rendered at setup time, under a header that declares every procedure required reading before any task. Copilot loads the file in full into the system prompt of every request.
 
-The prompt is a one-fact lookup in one file. None of the eight procedures helps with it, yet all of them sit in context on every turn. Scenario 03 ships the same procedures as skills and serves as the control.
+The prompt is a one-fact lookup in one file. None of the eight procedures helps with it, yet all of them sit in context on every turn. Scenario 03 ships the same procedures as skills and serves as the control, so this guide borrows one run from it.
 
 ## Run it
 
-Observation protocol for every run: start a fresh Copilot session in the worktree, type `/context` before the prompt, send the prompt, then `/context`, `/usage` and `/diff` (or `git status --porcelain`). Personal skills and agents from `~/.copilot` may appear in `/skills`; `cce doctor` warns about them.
+Before you start: the [setup](../PREREQUISITES.md) is done and `cce list` shows scenarios 02 and 03 as `ready`. Keep a second terminal for the shell commands.
 
-The prompt, identical for all three data points:
+Record what you see as you go:
+
+| Run | `/context` at turn 0 → after | `/usage` Tokens ↑ | AI credits (≈ $) | Answer and citation |
+| --- | --- | --- | --- | --- |
+| (a) S02, instructions on | | | | |
+| (b) S02, loading switched off | | | | |
+| (c) S03, procedures as skills | | | | |
+
+The prompt, identical in all three runs:
 
 ```text
 In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
 ```
 
-Do not re-word it. In particular, do not add "table" or "format": those words appear in skill descriptions and would trigger a skill in scenario 03, spoiling the comparison.
+Do not re-word it. In particular, do not add "table" or "format": those words appear in skill descriptions and would trigger a skill in run (c), spoiling the comparison.
 
-If the model refuses to start because the context is oversized, add `--context long_context` to the `copilot` command.
+### Run (a): scenario 02, instructions on
 
-### Data point (a): scenario 02, instructions on
+1. **Start** a fresh session from the baseline (answer `1. Yes` to the folder-trust question the first time):
 
-```sh
-cce reset 2 && cd "$(cce path 2)" && copilot
-```
+   ```sh
+   cce reset 2 && cd "$(cce path 2)" && copilot --allow-all --model claude-sonnet-5
+   ```
 
-### Data point (b): scenario 02, instructions off
+2. **Check**: `/context` before typing. Expect the context to be nearly half full already, with the `System Prompt` line above 100k tokens: that is the instructions file. `/instructions` shows it enabled; `wc -c .github/copilot-instructions.md` in the shell shows why.
 
-```sh
-cce reset 2 && cd "$(cce path 2)" && copilot --no-custom-instructions
-```
+3. **Send** the prompt.
 
-### Data point (c): scenario 03, procedures as skills
+4. **Observe**: expect the answer 28. Watch whether a `Read metrics.md` line appears at all: with the file's text already in its context, the measured run answered without opening it and cited the wrong line. Then `/context` (the whole file is still there, and every later turn resends it) and `/usage` (`AI Credits`, `Tokens ↑`).
 
-```sh
-cce reset 3 && cd "$(cce path 3)" && copilot
-```
+5. **Quit and reset**: `/exit`, then `cce reset 2`.
 
-Fill in the table as you go:
+### Run (b): scenario 02, loading switched off
 
-| Run | `/context` at turn 0 | `/context` after the reply | `/usage` | Answer and citation |
-| --- | --- | --- | --- | --- |
-| (a) S02, instructions on | | | | |
-| (b) S02, `--no-custom-instructions` | | | | |
-| (c) S03, skills | | | | |
+1. **Start** with the instructions file present but not loaded:
+
+   ```sh
+   cce reset 2 && cd "$(cce path 2)" && copilot --allow-all --no-custom-instructions --model claude-sonnet-5
+   ```
+
+2. **Check**: `/instructions` says the file is disabled for this session, and `/context` starts around 20k. Note the number next to run (a)'s.
+
+3. **Send** the same prompt.
+
+4. **Observe**: expect a `Read metrics.md` line, the same answer with the correct citation (`insights/metrics.md:24` and `:33`), and a fraction of run (a)'s credits in `/usage`.
+
+5. **Quit and reset**: `/exit`, then `cce reset 2`.
+
+### Run (c): scenario 03, the same procedures as skills
+
+1. **Start** in scenario 03's worktree:
+
+   ```sh
+   cce reset 3 && cd "$(cce path 3)" && copilot --allow-all --model claude-sonnet-5
+   ```
+
+2. **Check**: `/context` starts around 21k, and `/skills` lists the eight repository skills (Esc to close). In the shell, `wc -c .github/copilot-instructions.md` shows a few hundred bytes.
+
+3. **Send** the same prompt.
+
+4. **Observe**: expect the same answer and citation, `/context` and `/usage` close to run (b)'s, no `● skill(...)` line in the transcript and no `procedure:` line in the reply: nothing was loaded.
+
+5. **Quit and reset**: `/exit`, then `cce reset 3`.
 
 ## What to notice
 
-- The answer is 28 in every run, cited at `insights/metrics.md:24` or `insights/metrics.md:33`. Re-derive: `grep -n '28 days' insights/metrics.md`.
-- The distractor is "monthly" at `insights/metrics.md:12`, which is how often the figures are tracked, not the window they are calculated over. Re-derive: `grep -n -i monthly insights/metrics.md`. The prompt asks "how many days" for that reason.
-- Row (a) starts with the context nearly full before you type: about 100k tokens for the instructions alone. Rows (b) and (c) start close to empty. Re-derive the size: `wc -c .github/copilot-instructions.md` in scenario 02, then the same command in scenario 03.
-- Same answer, same citation, a fraction of the input tokens. In (a) every later turn pays the same again, because instructions are resent with each request.
-- In (c), `/skills` lists eight skills and none loads: the reply carries no `procedure:` line.
+What must hold on every run: the same answer, run (a) starting with a nearly full context, runs (b) and (c) starting near the baseline, and no skill loading in run (c). Exact token counts vary between runs.
 
-The lesson: instructions are for rules that apply to every request. A task runbook applies to one kind of task, and putting it in instructions charges every unrelated request for it. Scenario 03 shows the alternative.
+Measured on Claude Sonnet 5:
+
+| Run | `/context` turn 0 → after | `System Prompt` line | `/usage` Tokens ↑ | AI credits (≈ $) |
+| --- | --- | --- | --- | --- |
+| (a) S02, instructions on | 118k → 119k | 106.5k | 156.5k | 35.02 (≈ $0.35) |
+| (b) S02, loading switched off | 20k → 21k | 8.3k | 81.2k | 4.15 (≈ $0.04) |
+| (c) S03, procedures as skills | 21k → 22k | 9.1k | 84.4k | 4.38 (≈ $0.04) |
+
+- The answer is 28, at `insights/metrics.md:24` and `insights/metrics.md:33`. Re-derive: `grep -n '28 days' insights/metrics.md`. In run (a) the measured reply cited line 15, a number that does not exist in the file: it answered from the copy in its context instead of reading the file.
+- The distractor is "monthly" at `insights/metrics.md:12`, which is how often the figures are tracked, not the window they are calculated over. Re-derive: `grep -n -i monthly insights/metrics.md`. The prompt asks "how many days" for that reason.
+- Re-derive the size difference: `wc -c .github/copilot-instructions.md` in scenario 02, then the same command in scenario 03.
+- Same answer, eight times the credits. In (a) every later turn pays the same again, because instructions are resent with each request.
+
+The lesson: instructions are for rules that apply to every request. A task runbook applies to one kind of task, and putting it in instructions charges every unrelated request for it. Scenario 03 shows the alternative in full.
+
+### Impact in numbers
+
+Rough figures from the measured runs (percentages are rounded):
+
+- Credits: the lookup cost about 88% less without the runbooks in context (4.15 against 35.02), and about 87% less with them packaged as skills (4.38 against 35.02). Roughly one eighth of the price for the same answer.
+- Context at turn 0: about 83% smaller (20k against 118k). The inlined file alone was 106k tokens of system prompt, about 5 times the size of everything else in the session.
+- Input tokens sent: about 48% fewer for the one-turn lookup (81.2k against 156.5k). That gap widens with every turn, because the system prompt is resent each time: after ten turns the inlined session has paid for the file ten times.
+- Accuracy: the only wrong citation of the three came from the inlined run, which answered from its context instead of reading the file.
 
 ## Reset
 

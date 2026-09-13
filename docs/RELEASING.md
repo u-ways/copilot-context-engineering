@@ -94,16 +94,10 @@ A `git+https` install without a ref tracks `main` until the first `cce update`, 
 uv tool install --force "copilot-context-engineering @ git+https://github.com/u-ways/copilot-context-engineering@vX.Y.Z"
 ```
 
-## Configuration
+## Update Configurations
 
 | Variable | Effect | Default |
 | --- | --- | --- |
 | `CCE_UPDATE_INTERVAL` | Seconds between update checks | `86400` |
 | `CCE_DISABLE_UPDATE_CHECK` | Any value disables the update check | unset |
 | `CI` | Disables the update check; set by CI systems | unset |
-| `CCE_WORKSPACE` | Workspace path override | `$XDG_DATA_HOME/cce`, falling back to `~/.local/share/cce` |
-| `CCE_LOG_FORMAT` | Log renderer on stderr: `console` or `json` | `console` |
-| `CCE_RELEASES_URL` | Endpoint consulted for the latest release (tests and forks) | the GitHub `releases/latest` API |
-| `CCE_LLM_RUNTIME` | Default runtime for `just llm` (the `--runtime` pytest option) | `copilot` |
-| `CCE_LLM_MODEL` | Passed to the LLM runtime as `--model` | unset, the runtime's default model |
-| `CCE_LLM_ISOLATE` | `1` runs Copilot under a scratch `COPILOT_HOME`; needs `COPILOT_GITHUB_TOKEN` | unset |

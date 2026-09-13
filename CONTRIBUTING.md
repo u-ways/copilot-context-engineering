@@ -1,14 +1,12 @@
 # Contributing
 
-This page explains how the tool works inside, what its exit codes mean, and the development loop. The binding rules for anyone, human or agent, changing this repository are in [AGENTS.md](AGENTS.md). The decisions behind the design are recorded in [docs/adrs/](docs/adrs/README.md); ADRs win over every other document, this one included.
+This page explains how the tool works inside, what its exit codes mean, and the development loop.
 
 ## How it works
 
-The base content is [u-ways/software-engineering-quality-framework](https://github.com/u-ways/software-engineering-quality-framework), a fork of the NHS's [NHSDigital/software-engineering-quality-framework](https://github.com/NHSDigital/software-engineering-quality-framework), fetched at runtime at a pinned commit. Neither repository has a licence, so none of that content is redistributed here: it is cloned into your workspace when you run `cce setup`, and every scenario is a git worktree of it with a small overlay of Copilot customisation files committed as a resettable baseline. `cce reset` takes a scenario back to that baseline; `cce teardown` removes the whole workspace.
+The base content is [u-ways/software-engineering-quality-framework](https://github.com/u-ways/software-engineering-quality-framework), a fork of the NHS's [NHSDigital/software-engineering-quality-framework](https://github.com/NHSDigital/software-engineering-quality-framework), fetched at runtime at a pinned commit. 
 
-Overlays are stored in this package without leading dots (`github/copilot-instructions.md` rather than `.github/copilot-instructions.md`) so that packaging and ignore rules never drop them, and they are rendered at setup time. Where an overlay needs upstream text, an include directive pulls it from the clone into the worktree; that text is never part of this repository. `cce setup --dialect claude` renders the same overlays into Claude Code's layout (`CLAUDE.md`, `.claude/skills`, `.claude/agents`) through the translator in `src/cce/dialect.py`. `just llm copilot` or `just llm claude` runs the scenario prompts through the real agents and asserts which skills loaded, which files changed and the token ratios between runs.
-
-Presenter mode is opt-in via `cce setup --herdr`, which lays out one herdr workspace per scenario with its guide, its rendered overlay and a Copilot tab. It is never auto-detected: without the flag, `cce` does not talk to herdr at all.
+Neither repository has a licence, so none of that content is redistributed here: it is cloned into your workspace when you run `cce setup`, and every scenario is a git worktree of it with a small overlay of Copilot customisation files committed as a resettable baseline. `cce reset` takes a scenario back to that baseline; `cce teardown` removes the whole workspace.
 
 ## Exit codes
 
@@ -35,7 +33,7 @@ Presenter mode is opt-in via `cce setup --herdr`, which lays out one herdr works
 
 Decisions live in [docs/adrs/](docs/adrs/); ADRs win over every other document, this page included. Releases are described in [docs/RELEASING.md](docs/RELEASING.md).
 
-A developer-facing slide deck lives in [docs/slides.md](docs/slides.md) (Marp; render with `just slides`).
+A developer-facing slide deck lives in [docs/slides/slides.md](docs/slides/slides.md) (Marp; render with `just slides`).
 
 ## Pull requests
 

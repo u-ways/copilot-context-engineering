@@ -84,7 +84,7 @@ smoke:
 
 # Render the developer slide deck to dist/slides.html (needs npx)
 slides:
-    npx -y @marp-team/marp-cli@4 docs/slides.md --theme docs/slides-theme.css -o dist/slides.html
+    npx -y @marp-team/marp-cli@4 docs/slides/slides.md --theme docs/slides/slides-theme.css -o dist/slides.html
 
 # Remove caches, build output and generated reports
 clean:

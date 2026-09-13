@@ -142,7 +142,22 @@ class TestDoctorCommand:
         result = cli.invoke(app, ["doctor", "--offline", "--json"])
 
         checks = json.loads(result.stdout)
-        assert {"name", "status", "detail"} <= set(checks[0])
+        assert {"name", "status", "detail", "details"} <= set(checks[0])
+
+    def test_verbose_lists_the_files_behind_a_warn_row(
+        self, cli: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        home = tmp_path / "copilot-home"
+        (home / "skills" / "mine").mkdir(parents=True)
+        (home / "skills" / "mine" / "SKILL.md").write_text("x")
+        monkeypatch.setenv("COPILOT_HOME", str(home))
+
+        quiet = cli.invoke(app, ["doctor", "--offline"])
+        verbose = cli.invoke(app, ["doctor", "--offline", "--verbose"])
+
+        assert "warn  personal      global instructions may skew" in quiet.stdout
+        assert "skills/mine/SKILL.md" not in quiet.stdout
+        assert f"{'':20}skills/mine/SKILL.md\n" in verbose.stdout
 
     def test_failures_exit_three_after_printing_rows(
         self, cli: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

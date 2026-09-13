@@ -9,7 +9,7 @@ size: 16:9
 How to present this deck
 
   just slides                      # HTML into dist/slides.html
-  npx @marp-team/marp-cli docs/slides.md --theme docs/slides-theme.css --pdf
+  npx @marp-team/marp-cli docs/slides/slides.md --theme docs/slides/slides-theme.css --pdf
 
 Marp splits slides on the "---" lines below and needs the front matter
 above to stay first in the file. Without Marp, the file renders as
@@ -170,7 +170,7 @@ What it shows: the eight procedures now live at `.github/skills/<name>/SKILL.md`
 In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
 ```
 
-Prompt B, in a fresh session, a task that matches exactly one skill:
+Run B, in a fresh session, a task that matches exactly one skill:
 
 ```text
 Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
@@ -180,9 +180,9 @@ Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows 
 
 # 03 What you see
 
-Prompt A: 28 at `insights/metrics.md:24`; no skill loads; 19,941 input tokens on the final call (Claude Code: 19,461).
+Run A: 28 at `insights/metrics.md:24`; no skill loads; 19,941 input tokens on the final call (Claude Code: 19,461).
 
-Prompt B:
+Run B:
 
 - `/skills` shows `convert-page-to-framework-conventions` loaded and nothing else; `/context` grows by that one body, about 27 KB
 - the plan names the real defects: no H1, bare URLs on lines 5 and 9, unlabelled fences, trailing whitespace, a `## Context` link that must resolve to `../../../principles.md`
@@ -343,7 +343,7 @@ cce teardown --herdr    # closes only the workspaces it created
 - Lays out a `DEMO` workspace (the presenting guide and `cce list`) plus one herdr workspace per scenario with tabs for the guide, the rendered overlay files and a `copilot` session in the worktree
 - Scenario 06 gets a second tab running `copilot --agent auditor` for run B
 - Workspaces are labelled `cce:demo` and `cce:<slug>`; duplicates are refused with exit 3
-- Between runs: `cce reset N && cd "$(cce path N)" && copilot`; say the turn-0 `/context` number out loud before the prompt
+- Between runs: `cce reset N && cd "$(cce path N)" && copilot --allow-all --model claude-sonnet-5`; say the turn-0 `/context` number out loud before the prompt
 - Without the flag, `cce` never talks to herdr
 
 ---
