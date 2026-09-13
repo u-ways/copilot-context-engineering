@@ -17,6 +17,42 @@
 }
 
 section {
+    /* The imported default theme paints table rows and syntax tokens through these
+       variables, tuned for a white page; retune them for the dark ground. */
+    --bgColor-default: var(--cce-ground);
+    --bgColor-muted: var(--cce-surface);
+    --borderColor-default: var(--cce-line);
+    --borderColor-muted: var(--cce-line);
+    --color-prettylights-syntax-comment: var(--cce-muted);
+    --color-prettylights-syntax-constant: var(--cce-code);
+    --color-prettylights-syntax-entity: var(--cce-code);
+    --color-prettylights-syntax-entity-tag: var(--cce-code);
+    --color-prettylights-syntax-keyword: var(--cce-accent);
+    --color-prettylights-syntax-storage-modifier-import: var(--cce-text);
+    --color-prettylights-syntax-string: #b8dfa0;
+    --color-prettylights-syntax-string-regexp: #b8dfa0;
+    --color-prettylights-syntax-variable: #f2c98a;
+    --color-prettylights-syntax-markup-heading: var(--cce-accent);
+    --color-prettylights-syntax-markup-bold: var(--cce-text);
+    --color-prettylights-syntax-markup-italic: var(--cce-text);
+    --color-prettylights-syntax-markup-list: var(--cce-accent);
+    --color-prettylights-syntax-markup-deleted-text: #f2a0a0;
+    --color-prettylights-syntax-markup-deleted-bg: transparent;
+    --color-prettylights-syntax-markup-inserted-text: #b8dfa0;
+    --color-prettylights-syntax-markup-inserted-bg: transparent;
+    --color-prettylights-syntax-markup-changed-text: var(--cce-accent);
+    --color-prettylights-syntax-markup-changed-bg: transparent;
+    --color-prettylights-syntax-markup-ignored-text: var(--cce-muted);
+    --color-prettylights-syntax-markup-ignored-bg: transparent;
+    --color-prettylights-syntax-meta-diff-range: var(--cce-code);
+    --color-prettylights-syntax-brackethighlighter-unmatched: #f2a0a0;
+    --color-prettylights-syntax-brackethighlighter-angle: var(--cce-muted);
+    --color-prettylights-syntax-invalid-illegal-text: var(--cce-text);
+    --color-prettylights-syntax-invalid-illegal-bg: #7a2e2e;
+    --color-prettylights-syntax-carriage-return-text: var(--cce-text);
+    --color-prettylights-syntax-carriage-return-bg: #7a2e2e;
+    --color-prettylights-syntax-sublimelinter-gutter-mark: var(--cce-line);
+    --color-prettylights-syntax-constant-other-reference-link: var(--cce-code);
     background: var(--cce-ground);
     color: var(--cce-text);
     font-family: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
@@ -116,7 +152,14 @@ table {
     font-variant-numeric: tabular-nums;
 }
 
-th, td {
+table tr,
+table tr:nth-child(2n) {
+    background: transparent;
+    border: 0;
+}
+
+table th,
+table td {
     padding: 0.35em 0.8em;
     border: 0;
     border-bottom: 1px solid var(--cce-line);
@@ -125,7 +168,7 @@ th, td {
     text-align: left;
 }
 
-th {
+table th {
     color: var(--cce-muted);
     font-family: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
     font-size: 0.8em;
