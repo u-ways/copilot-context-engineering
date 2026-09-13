@@ -6,41 +6,70 @@ The eight procedures that scenario 02 inlined into its instructions are packaged
 
 Copilot reads only each skill's front matter (name and description) at start-up. A body enters the context only when a task matches its description. Every procedure ends with a tracer line, `procedure: <name>`, so a load is usually visible in the reply as well as in `/skills`; if a model omits the line, `/skills` is still the proof.
 
-Two prompts: a lookup that matches nothing, and a page-conversion task that matches exactly one skill.
+You will send two prompts in two fresh sessions: a lookup that matches nothing, and a page-conversion task that matches exactly one skill.
 
 ## Run it
 
-Observation protocol for every prompt: start a fresh Copilot session in the worktree, type `/context` before the prompt, send the prompt, then `/context`, `/usage`, `/skills` and `/diff` (or `git status --porcelain`). Personal skills and agents from `~/.copilot` may appear in `/skills`; `cce doctor` warns about them.
+Before you start: the [setup](../PREREQUISITES.md) is done and `cce list` shows scenario 03 as `ready`. Keep a second terminal in the worktree (`cd "$(cce path 3)"`).
 
-```sh
-cce reset 3 && cd "$(cce path 3)" && copilot
-```
+Record what you see as you go:
 
-### Prompt A: the lookup from scenario 02
+| Run | `/context` at turn 0 | `/context` after the reply | Skills loaded (`/skills`) | Tracer line in the reply? |
+| --- | --- | --- | --- | --- |
+| A, the lookup | | | | |
+| B, the conversion plan | | | | |
 
-```text
-In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
-```
+### Run A: the lookup from scenario 02
 
-### Prompt B: a task that matches a skill
+1. **Start** a fresh session from the baseline:
 
-Start a fresh session, then send:
+   ```sh
+   cce reset 3 && cd "$(cce path 3)" && copilot
+   ```
 
-```text
-Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
-```
+2. **Check**: `/context` starts close to empty. `/skills` lists eight skills, none loaded; read their descriptions, because they are what Copilot will match the prompt against.
+
+3. **Send**:
+
+   ```text
+   In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
+   ```
+
+4. **Observe**: expect 28, cited at `insights/metrics.md:24` or `:33`, no `procedure:` line, `/skills` still showing none loaded, and `/context` barely changed. `/diff` is empty.
+
+5. **Quit and reset**: `/exit`, then `cce reset 3`.
+
+### Run B: a task that matches a skill
+
+1. **Start** a fresh session:
+
+   ```sh
+   cce reset 3 && cd "$(cce path 3)" && copilot
+   ```
+
+2. **Check**: `/context` at turn 0 again; it should match run A's.
+
+3. **Send**:
+
+   ```text
+   Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
+   ```
+
+4. **Observe**: `/skills` shows `convert-page-to-framework-conventions` loaded and nothing else; `/context` grew by about that one body (27 KB, `wc -c .github/skills/convert-page-to-framework-conventions/SKILL.md`); and the reply ends with:
+
+   ```text
+   procedure: convert-page-to-framework-conventions
+   ```
+
+   Then check the plan against the target page with `cat -n tools/aws-fis/jmeter/README.md` in the shell; the checklist is in the next section. `/diff` is empty: the prompt asked for a plan only.
+
+5. **Quit and reset**: `/exit`, then `cce reset 3`.
 
 ## What to notice
 
-Prompt A: the answer is 28 at `insights/metrics.md:24` or `:33` (`grep -n '28 days' insights/metrics.md`); no skill loads; no `procedure:` line; `/context` stays small.
+What must hold on every run: run A loads no skill, run B loads exactly one, and neither changes a file. The plan's wording varies; its coverage of the checklist below is what to judge.
 
-Prompt B: `/skills` shows `convert-page-to-framework-conventions` loaded and nothing else, `/context` grows by that one body, and the reply ends with:
-
-```text
-procedure: convert-page-to-framework-conventions
-```
-
-A good plan covers the points below, each checkable against the target page (`cat -n tools/aws-fis/jmeter/README.md`):
+A good plan covers these points, each checkable against the page:
 
 - Add an H1 (MD041): the page has none.
 - Split the content under level-2 headings and, since there will be two or more, add a bulleted table of contents with anchors.
@@ -63,7 +92,7 @@ grep -n -i -w master tools/aws-fis/jmeter/*.sh         # the sibling scripts
 grep -n MD013 scripts/markdown-check-format.sh         # line 21
 ```
 
-`git status --porcelain` is empty after both prompts.
+Compare the two rows of your table with scenario 02's row (a): the same eight procedures, and the lookup that cost about 100k tokens there costs a near-empty context here.
 
 The lesson: a skill costs its front matter until it is matched, then exactly its body, and only in the session that needed it. The same text in instructions (scenario 02) is paid by every request.
 

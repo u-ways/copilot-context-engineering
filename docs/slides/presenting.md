@@ -27,7 +27,7 @@ Order 01 to 06. The run counts below add up to thirteen live sessions (plus `./S
 | 05 | agent-permissions | 3 (+ `./STRUGGLE.sh`) | Same prompt, two agents: the researcher cannot write the file, the author does; the validator reports and fixes nothing by convention. |
 | 06 | agent-context-isolation | 2 | Delegated, the audit returns two lines and your context stays small; run directly, 48 file reads land in your session. |
 
-Scenario 02's data point (c) is scenario 03's lookup, run once and counted under 03.
+Scenario 02's run (c) is scenario 03's run A, done once and counted under 03.
 
 Open with the TL;DR from `docs/SUMMARY.md` (instructions are "always follow these rules", a skill is "when doing X, here is how", an agent is "go do this and come back") and close with the comparison table.
 
@@ -49,7 +49,7 @@ cce reset N && cd "$(cce path N)" && copilot
 
 Reset even when the previous run made no visible change: a prompt that "did nothing" may still have left a session file or a partial edit, and a reset is instant. Between scenarios, `cce reset all` clears everything. If a worktree is damaged beyond a reset, `cce setup N --force` recreates it from scratch.
 
-Within a run, follow the observation protocol printed in each guide: `/context` before the prompt, the prompt, then `/context`, `/usage` and `/diff` or `git status --porcelain`. Say the turn-0 number out loud before sending the prompt so the audience can compare.
+Within a run, follow the numbered steps printed in each guide: `/context` before the prompt, the prompt, then `/context`, `/usage` and `/diff` or `git status --porcelain`. Say the turn-0 number out loud before sending the prompt so the audience can compare.
 
 ## Presenter mode
 

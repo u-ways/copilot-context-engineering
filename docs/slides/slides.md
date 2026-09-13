@@ -170,7 +170,7 @@ What it shows: the eight procedures now live at `.github/skills/<name>/SKILL.md`
 In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
 ```
 
-Prompt B, in a fresh session, a task that matches exactly one skill:
+Run B, in a fresh session, a task that matches exactly one skill:
 
 ```text
 Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
@@ -180,9 +180,9 @@ Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows 
 
 # 03 What you see
 
-Prompt A: 28 at `insights/metrics.md:24`; no skill loads; 19,941 input tokens on the final call (Claude Code: 19,461).
+Run A: 28 at `insights/metrics.md:24`; no skill loads; 19,941 input tokens on the final call (Claude Code: 19,461).
 
-Prompt B:
+Run B:
 
 - `/skills` shows `convert-page-to-framework-conventions` loaded and nothing else; `/context` grows by that one body, about 27 KB
 - the plan names the real defects: no H1, bare URLs on lines 5 and 9, unlabelled fences, trailing whitespace, a `## Context` link that must resolve to `../../../principles.md`
