@@ -29,7 +29,7 @@ Order 01 to 06. The run counts below add up to thirteen live sessions (plus `./S
 
 Scenario 02's data point (c) is scenario 03's lookup, run once and counted under 03.
 
-Open with the TL;DR from the README (instructions are "always follow these rules", a skill is "when doing X, here is how", an agent is "go do this and come back") and close with the comparison table.
+Open with the TL;DR from `docs/SUMMARY.md` (instructions are "always follow these rules", a skill is "when doing X, here is how", an agent is "go do this and come back") and close with the comparison table.
 
 ## Bring the room in
 

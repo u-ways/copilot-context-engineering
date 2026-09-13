@@ -1,6 +1,7 @@
 """One guide per scenario with fixed sections, shipped in the wheel, plus the entry pages.
 
-ADR-0009 (guides, index, README) and ADR-0006 (the exit-code table in CONTRIBUTING.md).
+ADR-0009 (guides, index, summary), ADR-0006 (exit codes) and ADR-0003 (the runtime-fetch
+statement), the latter two in CONTRIBUTING.md.
 """
 
 import re
@@ -50,6 +51,12 @@ class TestEntryPoints:
 
         assert 'uv tool install "copilot-context-engineering @ git+' in text
 
+    def test_contributing_states_the_runtime_fetch_rule(self) -> None:
+        text = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+
+        assert "fetched at runtime" in text
+        assert re.search(r"(not|none of [^.]* is) redistributed", text)
+
     def test_contributing_carries_the_exit_code_table(self) -> None:
         text = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
 
@@ -57,23 +64,21 @@ class TestEntryPoints:
             assert f"| {code} |" in text, code
 
 
-class TestReadme:
-    def test_lists_every_scenario_with_its_guide_link(self) -> None:
-        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
-
-        for scenario in load().scenarios:
-            assert f"| {scenario.id} |" in readme, scenario.id
-            assert f"docs/scenarios/{scenario.slug}.md" in readme, scenario.slug
-
+class TestSummary:
     def test_carries_the_comparison_table_and_the_tldr(self) -> None:
-        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        summary = (REPO_ROOT / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
 
         for row in ("| Always loaded? |", "| Adaptive? |", "| Size concern? |"):
-            assert row in readme
-        assert 'TL;DR: Instructions = "Always follow these rules."' in readme
-        assert re.search(
-            r"fetched at runtime.*not (part of this distribution|redistributed)", readme
-        )
+            assert row in summary
+        assert 'TL;DR: Instructions = "Always follow these rules."' in summary
+
+    def test_every_row_links_a_scenario_guide(self) -> None:
+        summary = (REPO_ROOT / "docs" / "SUMMARY.md").read_text(encoding="utf-8")
+        guides = [f"scenarios/{scenario.slug}.md" for scenario in load().scenarios]
+
+        for row in ("| Always loaded? |", "| Adaptive? |", "| Size concern? |"):
+            line = next(line for line in summary.split("\n") if line.startswith(row))
+            assert any(guide in line for guide in guides), row
 
 
 class TestPackaging:

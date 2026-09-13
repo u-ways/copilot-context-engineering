@@ -17,7 +17,7 @@ It is a rich repository of insights, patterns and practices: plenty for frontier
 
 ## Scenarios
 
-Run them in order. Each one leans on the one before it, and the six together cover the three mechanisms in the [comparison table](../../README.md#which-should-i-use).
+Run them in order. Each one leans on the one before it, and the six together cover the three mechanisms in the [comparison table](../SUMMARY.md).
 
 | # | Scenario | The question it answers | Runs | Guide |
 | --- | --- | --- | --- | --- |

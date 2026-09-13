@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: the statement that upstream content is fetched at runtime and not redistributed lives in `CONTRIBUTING.md`; `README.md` no longer carries it.
 - Revision 2026-09-13: the manifest's `source.url` is the fork `u-ways/software-engineering-quality-framework`, whose `main` sits at the pinned commit, so the pin and every measured number are unchanged and the pinned history can no longer move or vanish underneath the scenarios. A fork cannot relicense the content, so every rule below applies to it unchanged; wherever this ADR names `NHSDigital/`, the fork's name counts the same way.
 - Revision 2026-09-13: `--source-ref` must be a 40-hexadecimal-digit commit sha like the manifest's pin (a branch name would silently freeze at the clone-time snapshot); anything else is a usage error. Upstream blobs are read as bytes so a non-UTF-8 file reaches the renderer's own error path.
 
@@ -27,7 +28,7 @@ LLM-backed runs (ADR-0010) produce transcripts that may echo upstream prose verb
 - Guides, tests and overlays cite upstream as `path:line` and paraphrase in their own words; they never quote upstream text. No directory named `fixtures`, `testdata` or `golden` under `tests/` holds `.md` files, because that is where upstream snapshots would otherwise accumulate.
 - After a fetch, setup warns when the pinned tree tracks any of `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/instructions/**`, `.github/skills/**`, `.github/agents/**` or `.claude/**`, because upstream customisation would skew every scenario. The e2e tier asserts that none of these exist at the pin, so moving the pin to a commit that adds one is a deliberate, reviewed change.
 - Transcripts from LLM runs stay under `.cce-artifacts/` (gitignored) and are never committed or uploaded; CI uploads only the structural `RunResult` JSON.
-- `README.md` states that upstream content is fetched at runtime and is not redistributed.
+- `CONTRIBUTING.md` states that upstream content is fetched at runtime and is not redistributed.
 
 ## Consequences
 
@@ -46,5 +47,5 @@ LLM-backed runs (ADR-0010) produce transcripts that may echo upstream prose verb
 - Flag any file under `tests/` outside `tests/e2e/` and `tests/llm/` that contains `NHSDigital/` or `u-ways/software-engineering-quality-framework`, or clones from a URL that does not start with `file://`.
 - Flag any directory named `fixtures`, `testdata` or `golden` under `tests/` that contains a `.md` file.
 - Flag quoted upstream prose in `docs/`, `src/cce/overlays/` or `tests/`; the mechanical check is the e2e licence guard under `tests/e2e/` (no line of forty or more characters in `docs/` or `src/cce/overlays/` equals a line of any upstream file at the pin).
-- Require `README.md` to state that upstream content is fetched at runtime and is not redistributed.
+- Require `CONTRIBUTING.md` to state that upstream content is fetched at runtime and is not redistributed.
 - Require `tests/e2e/` to contain a test asserting that none of `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `.github/instructions/`, `.github/skills/`, `.github/agents/` and `.claude/` exist in the pinned tree.
