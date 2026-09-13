@@ -6,7 +6,7 @@ Binding rules for any coding agent, and any human, working in this repository.
 
 - Read `docs/adrs/README.md` first. ADRs win over every other document, this one included.
 - Every architecturally significant change lands in the same PR as the ADR that permits it: either a new ADR or a `- Revision YYYY-MM-DD:` bullet on an existing one.
-- Never copy text from the upstream NHS repository (`NHSDigital/software-engineering-quality-framework`) into this repo: no excerpts, fixtures or quotes. Cite `path:line` and paraphrase in our own words.
+- Never copy text from the framework repository (`u-ways/software-engineering-quality-framework`, a fork of the NHS's `NHSDigital/software-engineering-quality-framework`) into this repo: no excerpts, fixtures or quotes. Cite `path:line` and paraphrase in our own words.
 - Never reference private or internal projects, companies or people.
 - No AI attribution in commits or PRs: no `Co-Authored-By` trailers, no "generated with" lines.
 - Commit and PR titles are sentence-case imperative, usually `Area: summary`.
