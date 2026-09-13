@@ -198,6 +198,7 @@ class TestChecksAndCompares:
         check = manifest.scenarios[1].checks[0]
         assert check.name == "lookup" and check.skills_loaded == () and check.files_changed_max == 0
         assert manifest.compares[0].left == "02/lookup" and manifest.compares[0].ratio == 1.5
+        assert manifest.compares[0].right_metric is None
 
     def test_packaged_checks_reference_only_known_agents_and_compares_known_checks(self) -> None:
         manifest = load()
@@ -205,7 +206,8 @@ class TestChecksAndCompares:
         for scenario in manifest.scenarios:
             for check in scenario.checks:
                 assert check.agent is None or check.agent in scenario.agents, check.name
-        assert len(manifest.compares) >= 2
+        assert len(manifest.compares) >= 3
+        assert any(compare.right_metric == "main_input_tokens" for compare in manifest.compares)
 
     @pytest.mark.parametrize(
         ("mutation", "message"),

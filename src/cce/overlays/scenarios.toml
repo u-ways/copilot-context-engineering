@@ -118,7 +118,9 @@ prompt = "How many level-2 Markdown headings (lines starting with \"## \") are t
 contains = ["\\b218\\b"]
 files_changed_max = 0
 
-# Cross-run assertions for the LLM tier: left must exceed ratio x right.
+# Cross-run assertions for the LLM tier: left's metric must exceed ratio x right's.
+# input_tokens = the main thread's final call context; main_input_tokens and
+# subagent_input_tokens = cumulative input tokens over the run.
 [[compare]]
 metric = "input_tokens"
 left = "02/lookup"
@@ -126,7 +128,14 @@ right = "03/lookup"
 ratio = 1.5
 
 [[compare]]
-metric = "input_tokens"
+metric = "main_input_tokens"
 left = "06/direct"
 right = "06/delegated"
-ratio = 1.0
+ratio = 1.5
+
+[[compare]]
+metric = "subagent_input_tokens"
+left = "06/delegated"
+right = "06/delegated"
+right_metric = "main_input_tokens"
+ratio = 3.0

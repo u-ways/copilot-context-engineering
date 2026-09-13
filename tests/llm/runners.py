@@ -27,6 +27,8 @@ class RunResult:
     skills_loaded: list[str]
     tools_used: list[str]
     input_tokens: int
+    main_input_tokens: int
+    subagent_input_tokens: int
     files_changed: list[str]
     transcript_path: str
 
@@ -103,6 +105,27 @@ def copilot_input_tokens(usage: Mapping[str, Any]) -> int:
     return int(value) if isinstance(value, int | float) else 0
 
 
+def copilot_agent_tokens(usage: Mapping[str, Any]) -> tuple[int, int]:
+    """``(main thread, all subagents)`` cumulative input tokens from ``agentMetrics``."""
+    main = 0
+    others = 0
+    metrics = usage.get("agentMetrics", {})
+    if not isinstance(metrics, dict):
+        return 0, 0
+    for agent, record in metrics.items():
+        models = record.get("modelMetrics", {}) if isinstance(record, dict) else {}
+        total = 0
+        for model in models.values() if isinstance(models, dict) else []:
+            used = model.get("usage", {}) if isinstance(model, dict) else {}
+            value = used.get("inputTokens", 0) if isinstance(used, dict) else 0
+            total += int(value) if isinstance(value, int | float) else 0
+        if agent == "main":
+            main += total
+        else:
+            others += total
+    return main, others
+
+
 class CopilotRunner:
     name = "copilot"
     dialect = Dialect.COPILOT
@@ -149,11 +172,14 @@ class CopilotRunner:
         usage: dict[str, Any] = {}
         if usage_path.is_file():
             usage = json.loads(usage_path.read_text(encoding="utf-8"))
+        main_tokens, subagent_tokens = copilot_agent_tokens(usage)
         return RunResult(
             text=text,
             skills_loaded=skills,
             tools_used=tools,
             input_tokens=copilot_input_tokens(usage),
+            main_input_tokens=main_tokens,
+            subagent_input_tokens=subagent_tokens,
             files_changed=files_changed(worktree),
             transcript_path=str(transcript),
         )
@@ -162,20 +188,46 @@ class CopilotRunner:
 # --- Claude Code ---------------------------------------------------------------------
 
 
-def parse_claude_events(lines: Iterable[str]) -> tuple[str, list[str], list[str], int]:
-    """``(final text, skills, tools, main-thread input tokens)`` from ``stream-json`` lines."""
+@dataclass(frozen=True, slots=True)
+class ClaudeParse:
+    text: str
+    skills: list[str]
+    tools: list[str]
+    input_tokens: int
+    main_input_tokens: int
+    subagent_input_tokens: int
+
+
+def _usage_total(message: Mapping[str, Any]) -> int:
+    usage = message.get("usage", {})
+    if not isinstance(usage, dict):
+        return 0
+    total = 0
+    for key in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"):
+        value = usage.get(key, 0)
+        total += int(value) if isinstance(value, int | float) else 0
+    return total
+
+
+def parse_claude_events(lines: Iterable[str]) -> ClaudeParse:
+    """Final text, skills, tools and token totals from ``stream-json`` lines."""
     text = ""
     skills: list[str] = []
     tools: list[str] = []
     input_tokens = 0
+    main_total = 0
+    subagent_total = 0
     for event in _events(lines):
         kind = event.get("type")
         if kind == "result" and isinstance(event.get("result"), str):
             text = event["result"]
-        if kind != "assistant" or event.get("parent_tool_use_id"):
+        if kind != "assistant":
             continue
         message = event.get("message", {})
         if not isinstance(message, dict):
+            continue
+        if event.get("parent_tool_use_id"):
+            subagent_total += _usage_total(message)
             continue
         for block in message.get("content", []):
             if not isinstance(block, dict):
@@ -192,15 +244,11 @@ def parse_claude_events(lines: Iterable[str]) -> tuple[str, list[str], list[str]
                     )
                     if isinstance(skill, str) and skill not in skills:
                         skills.append(skill)
-        usage = message.get("usage", {})
-        if isinstance(usage, dict):
-            total = 0
-            for key in ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"):
-                value = usage.get(key, 0)
-                total += int(value) if isinstance(value, int | float) else 0
-            if total:
-                input_tokens = total
-    return text, skills, tools, input_tokens
+        total = _usage_total(message)
+        main_total += total
+        if total:
+            input_tokens = total
+    return ClaudeParse(text, skills, tools, input_tokens, main_total, subagent_total)
 
 
 class ClaudeRunner:
@@ -244,12 +292,14 @@ class ClaudeRunner:
             timeout=RUN_TIMEOUT_SECONDS,
         )
         transcript.write_text(completed.stdout, encoding="utf-8")
-        text, skills, tools, input_tokens = parse_claude_events(completed.stdout.split("\n"))
+        parsed = parse_claude_events(completed.stdout.split("\n"))
         return RunResult(
-            text=text,
-            skills_loaded=skills,
-            tools_used=tools,
-            input_tokens=input_tokens,
+            text=parsed.text,
+            skills_loaded=parsed.skills,
+            tools_used=parsed.tools,
+            input_tokens=parsed.input_tokens,
+            main_input_tokens=parsed.main_input_tokens,
+            subagent_input_tokens=parsed.subagent_input_tokens,
             files_changed=files_changed(worktree),
             transcript_path=str(transcript),
         )

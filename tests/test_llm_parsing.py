@@ -4,6 +4,7 @@ import json
 
 from tests.llm.runners import (
     RunResult,
+    copilot_agent_tokens,
     copilot_input_tokens,
     parse_claude_events,
     parse_copilot_events,
@@ -41,10 +42,22 @@ class TestCopilotParsing:
         assert copilot_input_tokens({}) == 0
         assert copilot_input_tokens({"lastCallInputTokens": "x"}) == 0
 
+    def test_agent_metrics_split_main_from_subagents(self) -> None:
+        usage = {
+            "agentMetrics": {
+                "main": {"modelMetrics": {"m": {"usage": {"inputTokens": 100}}}},
+                "sub-1": {"modelMetrics": {"m": {"usage": {"inputTokens": 400}}}},
+                "sub-2": {"modelMetrics": {"m": {"usage": {"inputTokens": 500}}}},
+            }
+        }
+
+        assert copilot_agent_tokens(usage) == (100, 900)
+        assert copilot_agent_tokens({}) == (0, 0)
+
 
 class TestClaudeParsing:
     def test_ignores_subagent_events_and_sums_the_last_main_usage(self) -> None:
-        text, skills, tools, tokens = parse_claude_events(
+        parsed = parse_claude_events(
             lines(
                 {
                     "type": "assistant",
@@ -78,15 +91,17 @@ class TestClaudeParsing:
             )
         )
 
-        assert text == "218\nScope: everything."
-        assert skills == ["alpha"]
-        assert tools == ["Skill"]
-        assert tokens == 45
+        assert parsed.text == "218\nScope: everything."
+        assert parsed.skills == ["alpha"]
+        assert parsed.tools == ["Skill"]
+        assert parsed.input_tokens == 45
+        assert parsed.main_input_tokens == 79
+        assert parsed.subagent_input_tokens == 90000
 
 
 class TestRunResult:
     def test_structural_view_drops_the_transcript_text(self) -> None:
-        result = RunResult("secret prose", ["a"], ["Read"], 12, [], "/tmp/x.jsonl")
+        result = RunResult("secret prose", ["a"], ["Read"], 12, 12, 0, [], "/tmp/x.jsonl")
 
         view = result.structural()
 

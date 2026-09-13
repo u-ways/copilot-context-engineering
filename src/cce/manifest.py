@@ -87,12 +87,17 @@ class Check:
 
 @dataclass(frozen=True, slots=True)
 class Compare:
-    """A cross-run assertion: ``left`` metric must exceed ``ratio`` times ``right``."""
+    """A cross-run assertion: ``left``'s ``metric`` must exceed ``ratio`` times ``right``'s.
+
+    ``right_metric`` defaults to ``metric``; set it to compare two different
+    metrics, for example a run's subagent tokens against its own main thread.
+    """
 
     metric: str
     left: str
     right: str
     ratio: float
+    right_metric: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -337,17 +342,21 @@ def _check(data: Mapping[str, Any], where: str) -> Check:
 
 
 def _compare(data: Mapping[str, Any], index: int) -> Compare:
-    unknown = set(data) - {"metric", "left", "right", "ratio"}
+    unknown = set(data) - {"metric", "left", "right", "ratio", "right_metric"}
     if unknown:
         raise ManifestError(f"compare[{index}] has unknown keys: {', '.join(sorted(unknown))}")
     ratio = data.get("ratio", 1.0)
     if isinstance(ratio, bool) or not isinstance(ratio, int | float) or ratio <= 0:
         raise ManifestError(f"compare[{index}].ratio must be a positive number")
+    right_metric = data.get("right_metric")
+    if right_metric is not None:
+        right_metric = _string(right_metric, f"compare[{index}].right_metric")
     return Compare(
         metric=_string(data.get("metric"), f"compare[{index}].metric"),
         left=_string(data.get("left"), f"compare[{index}].left"),
         right=_string(data.get("right"), f"compare[{index}].right"),
         ratio=float(ratio),
+        right_metric=right_metric,
     )
 
 

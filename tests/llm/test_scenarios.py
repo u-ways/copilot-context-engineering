@@ -69,10 +69,11 @@ def test_compare(compare: Compare, results: dict[str, RunResult]) -> None:
     missing = [side for side in (compare.left, compare.right) if side not in results]
     if missing:
         pytest.fail(f"compare needs results for {missing}; run the full tier")
+    right_metric = compare.right_metric or compare.metric
     left = getattr(results[compare.left], compare.metric)
-    right = getattr(results[compare.right], compare.metric)
+    right = getattr(results[compare.right], right_metric)
     assert isinstance(left, int | float) and isinstance(right, int | float)
     assert left > compare.ratio * right, (
-        f"{compare.metric}: {compare.left}={left} is not more than {compare.ratio}x "
-        f"{compare.right}={right}"
+        f"{compare.left}.{compare.metric}={left} is not more than {compare.ratio}x "
+        f"{compare.right}.{right_metric}={right}"
     )
