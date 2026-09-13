@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: the exit-code table lives in `CONTRIBUTING.md`; `README.md` is a brief front page (ADR-0009).
 - Revision 2026-09-13: `doctor` probes never raise: a crash or timeout becomes a `fail`/`warn` row (the upstream row names `--offline`).
 - Revision 2026-09-13: `cce --version`/`-V` prints the version eagerly; `list` and `setup` rows are column-aligned and carry the dialect; `doctor` colours its status token on a colour terminal (`NO_COLOR` disables it), probes `copilot --version` against the measured minimum 1.0.83, and reports an `overlays` render check; exit-3 messages name the exact remedy (`cce setup N` or `cce setup N --force`); `reset` refuses without a workspace before creating anything.
 
@@ -32,5 +33,5 @@
 - Flag `import logging` or `logging.` in `src/cce/*.py`, and structlog configured with any factory or stream other than stderr in `src/cce/log.py`.
 - Flag `sys.exit(` or `typer.Exit(` in `src/cce/*.py` outside `cli.py`.
 - Flag `input(`, `typer.prompt(` or `typer.confirm(` in `src/cce/*.py` outside `update.py`.
-- Require `README.md` to contain an exit-code table listing 0, 1, 2 and 3.
+- Require `CONTRIBUTING.md` to contain an exit-code table listing 0, 1, 2 and 3.
 - Require `tests/test_cli.py` to assert that `-v` with `-q` exits 2 and that `--log-format json` writes JSON to stderr.

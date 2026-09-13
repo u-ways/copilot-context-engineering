@@ -1,4 +1,7 @@
-"""One guide per scenario with fixed sections, shipped in the wheel (ADR-0009)."""
+"""One guide per scenario with fixed sections, shipped in the wheel, plus the entry pages.
+
+ADR-0009 (guides, index, README) and ADR-0006 (the exit-code table in CONTRIBUTING.md).
+"""
 
 import re
 import tomllib
@@ -17,7 +20,7 @@ REQUIRED_SECTIONS = ["## What it shows", "## Run it", "## What to notice", "## R
 
 class TestGuideFiles:
     def test_every_scenario_has_exactly_one_guide_and_no_extras(self) -> None:
-        expected = {f"{scenario.slug}.md" for scenario in load().scenarios}
+        expected = {f"{scenario.slug}.md" for scenario in load().scenarios} | {"README.md"}
 
         assert {path.name for path in SCENARIOS_DOCS.glob("*.md")} == expected
 
@@ -32,6 +35,26 @@ class TestGuideFiles:
 
     def test_presenting_guide_exists(self) -> None:
         assert (REPO_ROOT / "docs" / "presenting.md").read_text().startswith("# ")
+
+
+class TestEntryPoints:
+    def test_scenarios_index_links_every_guide(self) -> None:
+        index = (SCENARIOS_DOCS / "README.md").read_text(encoding="utf-8")
+
+        assert index.startswith("# ")
+        for scenario in load().scenarios:
+            assert f"({scenario.slug}.md)" in index, scenario.slug
+
+    def test_prerequisites_carry_the_install_line(self) -> None:
+        text = (REPO_ROOT / "docs" / "PREREQUISITES.md").read_text(encoding="utf-8")
+
+        assert 'uv tool install "copilot-context-engineering @ git+' in text
+
+    def test_contributing_carries_the_exit_code_table(self) -> None:
+        text = (REPO_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+
+        for code in range(4):
+            assert f"| {code} |" in text, code
 
 
 class TestReadme:
@@ -79,12 +102,14 @@ class TestPackaging:
         packaged = tmp_path / "guides"
         assert guide_path(manifest, "3", packaged) == packaged / "03-skills-on-demand.md"
         assert guide_path(manifest, "presenting", packaged) == packaged / "presenting.md"
+        assert guide_path(manifest, "scenarios", packaged) == packaged / "README.md"
 
         docs = tmp_path / "docs"
         assert guide_path(manifest, "03-skills-on-demand", docs) == (
             docs / "scenarios" / "03-skills-on-demand.md"
         )
         assert guide_path(manifest, "presenting", docs) == docs / "presenting.md"
+        assert guide_path(manifest, "scenarios", docs) == docs / "scenarios" / "README.md"
 
 
 class TestGuideCommand:
@@ -99,6 +124,12 @@ class TestGuideCommand:
 
         assert result.exit_code == 0
         assert result.stdout.startswith("# ")
+
+    def test_prints_the_walkthrough_index(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["guide", "scenarios"])
+
+        assert result.exit_code == 0
+        assert result.stdout == (SCENARIOS_DOCS / "README.md").read_text()
 
     def test_unknown_id_is_a_usage_error(self, cli: CliRunner) -> None:
         result = cli.invoke(app, ["guide", "99"])
