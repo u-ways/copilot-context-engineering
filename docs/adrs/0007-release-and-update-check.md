@@ -46,7 +46,7 @@
 
 - Require `tests/test_version.py` to compare the `version` in `pyproject.toml` with `cce.__version__`.
 - Require `pyproject.toml` to declare a static `version` (no `dynamic = ["version"]`) and `src/cce/__init__.py` to define `__version__`.
-- Require `.github/workflows/release-drafter.yml` to check tag existence (`git ls-remote --tags`), then version parity against `src/cce/__init__.py`, before any `softprops/action-gh-release` step.
+- Require `.github/workflows/release-drafter.yml` to check tag existence (`git ls-remote --tags`), then version parity against `src/cce/__init__.py`, before it deletes or creates any draft.
 - Require `.github/workflows/release.yml` to create the tag in-run on `workflow_dispatch` and to handle the three starting states (draft exists, release exists, nothing exists) without regenerating notes for an existing release.
 - Flag `generate_release_notes` or `--generate-notes` applied to a release that already exists.
 - Require `.github/workflows/release-detailer.yml` to give Claude no release-mutating tool and to check `isDraft` before every `gh release edit`.
