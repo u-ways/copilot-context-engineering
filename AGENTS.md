@@ -56,7 +56,7 @@ Binding rules for any coding agent, and any human, working in this repository.
 ## Layout
 
 ```text
-.editorconfig  .gitignore  .python-version  AGENTS.md  CLAUDE.md  LICENSE  README.md
+.editorconfig  .gitignore  .python-version  AGENTS.md  CLAUDE.md  CONTRIBUTING.md  LICENSE  README.md
 justfile  pyproject.toml  uv.lock
 .github/
     dependabot.yml                 uv and github-actions, weekly
@@ -64,9 +64,11 @@ justfile  pyproject.toml  uv.lock
     workflows/                     ci, security, adr-review, dependabot-auto-merge,
                                    release-drafter, release, e2e, llm-tests
 docs/
+    PREREQUISITES.md               requirements, install and first-run checks
     RELEASING.md                   release and update process
     adrs/                          index plus ADR-0001..0010; ADRs win over other docs
-    scenarios/                     one guide per scenario slug, shipped as cce/guides
+    scenarios/                     README.md walkthrough index plus one guide per scenario
+                                   slug, all shipped as cce/guides
     presenting.md                  presenter guide
 scripts/
     s06_ground_truth.py            dev-only ground truth for scenario 06

@@ -368,10 +368,14 @@ def update(
 @guarded
 def guide(
     scenario_id: Annotated[
-        str, typer.Argument(metavar="ID|presenting", help="Scenario id or 'presenting'.")
+        str,
+        typer.Argument(
+            metavar="ID|presenting|scenarios",
+            help="Scenario id, 'presenting' or 'scenarios' (the walkthrough index).",
+        ),
     ],
 ) -> None:
-    """Print a scenario guide (or the presenting guide) to stdout."""
+    """Print a scenario guide, the presenting guide or the walkthrough index to stdout."""
     path = manifest_module.guide_path(manifest_module.load(), scenario_id)
     if not path.is_file():
         raise CceError(f"guide not found: {path}", exit_code=2)
