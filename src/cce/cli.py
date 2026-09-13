@@ -7,6 +7,7 @@ only module that prints, prompts or exits.
 import functools
 import json
 import os
+import shutil
 import sys
 import time
 from collections.abc import Callable, Mapping
@@ -19,11 +20,12 @@ import typer
 
 from cce import CceError, __version__
 from cce import doctor as doctor_checks
+from cce import herdr as herdr_module
 from cce import manifest as manifest_module
 from cce import update as update_module
 from cce.dialect import Dialect
 from cce.log import LogFormat, configure, get_logger
-from cce.workspace import Status, Workspace
+from cce.workspace import HERDR_RECORD, Status, Workspace
 
 
 def default_cache_dir(env: Mapping[str, str], home: Path) -> Path:
@@ -175,10 +177,21 @@ def setup(
     dialect: Annotated[
         Dialect, typer.Option("--dialect", help="Render overlays for copilot or claude.")
     ] = Dialect.COPILOT,
+    herdr: Annotated[
+        bool, typer.Option("--herdr", help="Also lay out one herdr workspace per scenario.")
+    ] = False,
 ) -> None:
     """Clone the pinned upstream and prepare one worktree per scenario."""
     workspace, manifest = _workspace(ctx)
     scenarios = manifest_module.resolve_ids(manifest, ids or [])
+    client = herdr_module.Herdr()
+    if herdr:
+        # Labels depend only on the requested scenarios, so the collision check
+        # runs before any worktree or herdr mutation (ADR-0008).
+        planned = herdr_module.plan_layout(
+            manifest, workspace.root, {s.slug: workspace.path_for(s) for s in scenarios}, {}
+        )
+        herdr_module.preflight(os.environ, shutil.which, client, planned)
     results = workspace.setup(
         scenarios,
         source_url=source_url or manifest.source_url,
@@ -188,6 +201,15 @@ def setup(
     )
     for row in results:
         typer.echo(f"{row.scenario.id}  {row.scenario.slug}  {row.status}  {row.path}")
+    if herdr:
+        layout = herdr_module.plan_layout(
+            manifest,
+            workspace.root,
+            {row.scenario.slug: row.path for row in results if row.status is Status.READY},
+            {row.scenario.slug: workspace.overlay_files(row.scenario) for row in results},
+        )
+        created = herdr_module.apply_layout(client, layout, workspace.root / HERDR_RECORD)
+        typer.echo(f"herdr: created {len(created)} workspaces")
 
 
 @app.command("list")
@@ -266,9 +288,15 @@ def reset(
 def teardown(
     ctx: typer.Context,
     force: Annotated[bool, typer.Option("--force", help="Discard modified worktrees.")] = False,
+    herdr: Annotated[
+        bool, typer.Option("--herdr", help="Also close the herdr workspaces cce created.")
+    ] = False,
 ) -> None:
     """Remove the workspace: the base clone and every scenario worktree."""
     workspace, _ = _workspace(ctx)
+    if herdr:
+        closed = herdr_module.close_layout(herdr_module.Herdr(), workspace.root / HERDR_RECORD)
+        typer.echo(f"herdr: closed {len(closed)} workspaces")
     removed = workspace.teardown(force=force)
     if removed is None:
         get_logger("cce").info("nothing to remove", workspace=str(workspace.root))
