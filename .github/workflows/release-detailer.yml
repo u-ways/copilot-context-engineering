@@ -1,0 +1,115 @@
+name: Release Detailer
+
+# Enriches the freshly drafted release with a user-facing "Details" section written by
+# Claude from the pull requests and diff in the release range. Runs after "Release Drafter"
+# completes and before a human publishes.
+#
+# Two steps on purpose: Claude only reads and writes the proposed notes to a file; it has no
+# release-mutating tools. A trusted shell step then applies the notes, and only ever to a
+# draft. A first step checks that a draft exists at all, so pushes that did not bump the
+# version (most of them) cost nothing.
+
+on:
+    workflow_run:
+        workflows: ["Release Drafter"]
+        types: [completed]
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Draft release tag to enrich (blank = latest draft)."
+                required: false
+
+permissions:
+    contents: write
+    pull-requests: read
+
+concurrency:
+    group: release-detailer
+    cancel-in-progress: false
+
+jobs:
+    detail:
+        name: Enrich draft release notes
+        if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        env:
+            GH_TOKEN: ${{ github.token }}
+            GH_REPO: ${{ github.repository }}
+            INPUT_TAG: ${{ inputs.tag }}
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Find the draft
+              id: draft
+              run: |
+                  tag="${INPUT_TAG:-}"
+                  if test -z "$tag"; then
+                      tag="$(gh release list --limit 30 --json tagName,isDraft,createdAt \
+                          --jq 'map(select(.isDraft)) | sort_by(.createdAt) | reverse | .[0].tagName // ""')"
+                  fi
+                  if test -z "$tag"; then
+                      echo "::notice::No draft release to enrich"
+                  elif test "$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)" != "true"; then
+                      echo "::error::Release '$tag' is not a draft; refusing to touch it"
+                      exit 1
+                  fi
+                  echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+            # Step 1: Claude composes the new body to a file. Read-only tools plus Write; it
+            # cannot publish, delete, create or re-tag a release.
+            - name: Compose the details section
+              if: steps.draft.outputs.tag != ''
+              uses: anthropics/claude-code-action@v1
+              with:
+                  claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+                  github_token: ${{ github.token }}
+                  claude_args: |
+                      --allowedTools "Bash(gh release view:*),Bash(gh release list:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr diff:*),Bash(git log:*),Bash(git diff:*),Bash(git show:*),Bash(git tag:*),Read,Grep,Glob,Write"
+                      --max-turns 30
+                  prompt: |
+                      You are the release-notes editor for ${{ github.repository }}, the `cce` command-line tool that
+                      prepares GitHub Copilot CLI context-engineering scenarios. Compose a concise, user-facing
+                      "### Details" section for the DRAFT release "${{ steps.draft.outputs.tag }}". Do NOT edit any
+                      release yourself; only write the result to files. A later step applies it.
+
+                      1. Read the draft body: gh release view "${{ steps.draft.outputs.tag }}" --json body.
+                      2. Find the changes in the release range. The body usually has a "**Full Changelog**: .../compare/<base>...<head>"
+                         line; read the pull requests and diff in that range with gh pr view / gh pr list and git log / git diff.
+                         Read src/cce, docs/ or README.md only to name commands, flags, files and guides precisely. "Users" install
+                         `cce` with uv and run it in a terminal alongside Copilot CLI: describe what they see or do differently,
+                         and which scenario guides changed.
+                      3. Build the FULL new body:
+                         - the original generated notes, verbatim (byte for byte), up to but not including any
+                           "**Full Changelog**" line; then a blank line;
+                         - the section, heading EXACTLY "### Details": one short framing paragraph (1 to 3 sentences), then bold
+                           lead-in bullets for each user-visible change; call out anything that needs action from the user (for
+                           example an existing workspace that must be recreated, or a tag-pinned install that must be reinstalled),
+                           otherwise state "No action required". British English, under about 250 words, every claim grounded in
+                           a pull request or the diff. Never quote text from the upstream framework repository.
+                         - then, ONLY IF the original body had a "**Full Changelog**: ..." line: a blank line and that line verbatim.
+                           If there is none, omit it; do NOT fabricate a compare link.
+                         If the draft already has a "### Details" section, replace it in place.
+                      4. Write the full new body to "${{ github.workspace }}/.release-notes.md". Do not run gh release
+                         edit / create / delete / publish.
+
+            # Step 2: trusted apply. Only ever edits a draft.
+            - name: Apply the notes to the draft
+              if: steps.draft.outputs.tag != ''
+              env:
+                  TAG: ${{ steps.draft.outputs.tag }}
+              run: |
+                  if ! test -s .release-notes.md; then
+                      echo "::warning::No notes were produced; the draft is unchanged"
+                      exit 0
+                  fi
+                  if test "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" != "true"; then
+                      echo "::error::Release '$TAG' is no longer a draft; refusing to edit it"
+                      exit 1
+                  fi
+                  gh release edit "$TAG" --notes-file .release-notes.md
+                  echo "::notice::Enriched draft release $TAG"
