@@ -15,7 +15,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from cce import CceError
 from cce.manifest import Manifest
+from cce.render import PlaceholderUpstream, plan_scenario
 
 MINIMUM_GIT = (2, 31)
 MINIMUM_PYTHON = (3, 14)
@@ -83,6 +85,7 @@ def run_checks(environment: Environment, manifest: Manifest, *, offline: bool) -
             _tool(environment, "herdr", missing=Status.WARN, hint="presenter mode needs it")
         )
     checks.append(_personal_customisation(environment))
+    checks.append(_overlays(manifest))
     checks.append(_upstream(environment, manifest, offline=offline))
     return checks
 
@@ -160,6 +163,20 @@ def _has_claude_hooks(settings: Path) -> bool:
     except OSError, ValueError:
         return False
     return isinstance(data, dict) and bool(data.get("hooks"))
+
+
+def _overlays(manifest: Manifest) -> Check:
+    """Render every scenario against placeholder upstream text (syntax and structure only)."""
+    placeholder = PlaceholderUpstream()
+    total = 0
+    for scenario in manifest.scenarios:
+        try:
+            total += len(plan_scenario(scenario, manifest, placeholder))
+        except CceError as error:
+            return Check("overlays", Status.FAIL, str(error))
+    return Check(
+        "overlays", Status.OK, f"{len(manifest.scenarios)} scenarios render ({total} files)"
+    )
 
 
 def _upstream(environment: Environment, manifest: Manifest, *, offline: bool) -> Check:

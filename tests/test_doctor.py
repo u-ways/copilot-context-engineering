@@ -83,9 +83,27 @@ class TestHealthyMachine:
             "claude": Status.OK,
             "uv": Status.OK,
             "personal": Status.OK,
+            "overlays": Status.OK,
             "upstream": Status.OK,
         }
         assert not has_failures(list(checks.values()))
+
+    def test_overlays_render_against_placeholders(self, tmp_path: Path, manifest: Manifest) -> None:
+        checks = by_name(run_checks(environment(tmp_path), manifest, offline=True))
+
+        assert "1 scenarios render" in checks["overlays"].detail
+
+    def test_unrenderable_overlays_fail(self, tmp_path: Path) -> None:
+        manifest = parse(
+            MANIFEST_TEXT.format(url="file:///nowhere").replace(
+                'title = "Only"', 'title = "Only"\nagents = ["ghost"]'
+            )
+        )
+
+        checks = by_name(run_checks(environment(tmp_path), manifest, offline=True))
+
+        assert checks["overlays"].status is Status.FAIL
+        assert "ghost" in checks["overlays"].detail
 
     def test_offline_skips_the_upstream_check(self, tmp_path: Path, manifest: Manifest) -> None:
         checks = by_name(run_checks(environment(tmp_path), manifest, offline=True))

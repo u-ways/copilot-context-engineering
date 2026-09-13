@@ -1,35 +1,53 @@
-# Scenario manifest. Everything that differs between scenarios is declared here.
+# Scenario manifest. Everything that differs between scenarios is declared here;
+# Python never branches on a scenario id or slug.
 
 [source]
 url = "https://github.com/NHSDigital/software-engineering-quality-framework"
 ref = "6241aad0e6377588b624e7b5d407a6a0c3236e26"
+procedures = "_shared/procedures"
 
 [[scenario]]
 id = "01"
 slug = "01-instructions-timeless"
 title = "Instructions hold durable rules, not changing repo state"
+overlay = "01-instructions-timeless"
 
 [[scenario]]
 id = "02"
 slug = "02-instructions-context-cost"
 title = "Task runbooks in instructions are paid on every request"
+overlay = "02-instructions-context-cost"
 
 [[scenario]]
 id = "03"
 slug = "03-skills-on-demand"
 title = "The same procedures as skills cost nothing until matched"
+overlay = "03-skills-on-demand"
+skills = {}
 
 [[scenario]]
 id = "04"
 slug = "04-skills-description-routing"
 title = "Descriptions route skills"
+overlay = "04-skills-description-routing"
+skills = { rename = "seqf-procedure-{n}", rotate_descriptions = 1 }
 
 [[scenario]]
 id = "05"
 slug = "05-agent-permissions"
 title = "Permissions belong to the role"
+overlay = "05-agent-permissions"
+skills = {}
+agents = ["researcher", "author", "validator"]
+executable = ["STRUGGLE.sh"]
+files = [
+    { src = "_shared/scripts/cce-check-links.py", dest = "scripts/cce-check-links.py", executable = true },
+]
 
 [[scenario]]
 id = "06"
 slug = "06-agent-context-isolation"
 title = "Delegate when you need the result, not the investigation"
+overlay = "06-agent-context-isolation"
+agents = ["auditor"]
+tabs = [{ label = "copilot:auditor", command = "copilot --agent auditor" }]

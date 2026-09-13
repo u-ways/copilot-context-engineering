@@ -7,6 +7,9 @@ import pytest
 import structlog
 from typer.testing import CliRunner
 
+from cce.render import include_targets
+from tests.support.upstream import GitUpstream, SyntheticUpstream, build
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -27,3 +30,15 @@ def quiet_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterat
 def cli() -> CliRunner:
     """A Typer runner that keeps stdout and stderr separate."""
     return CliRunner()
+
+
+@pytest.fixture(scope="session")
+def upstream(tmp_path_factory: pytest.TempPathFactory) -> SyntheticUpstream:
+    """The synthetic upstream repository, built once per session."""
+    return build(tmp_path_factory.mktemp("upstream") / "repo", include_targets())
+
+
+@pytest.fixture
+def reader(upstream: SyntheticUpstream) -> GitUpstream:
+    """An upstream reader over the synthetic repository's head."""
+    return GitUpstream(upstream.path, upstream.head)
