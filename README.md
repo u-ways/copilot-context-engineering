@@ -18,7 +18,7 @@ Luckily for us, the industry caught this problem long ago, and we now have vario
 
 ## Who is this for?
 
-Heavy Copilot users: the people who run it all day and feel the usage limits.
+Heavy Copilot users: the people who feel the usage limits.
 
 > [!IMPORTANT]
 > Your first priority should be finding value in agentic AI.
