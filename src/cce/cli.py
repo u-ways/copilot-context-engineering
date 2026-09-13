@@ -42,7 +42,6 @@ def after_command(*_args: object, **_options: object) -> None:
         cache_dir=default_cache_dir(os.environ, Path.home()),
         now=time.time,
         is_tty=lambda: sys.stdin.isatty() and sys.stderr.isatty(),
-        confirm=lambda question: typer.confirm(question, default=True, err=True),
     )
 
 

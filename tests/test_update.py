@@ -299,6 +299,7 @@ class TestResultCallback:
         release_file: Callable[[str], str],
     ) -> None:
         monkeypatch.delenv("CCE_DISABLE_UPDATE_CHECK")
+        monkeypatch.delenv("CI", raising=False)
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg-cache"))
         monkeypatch.setenv("CCE_RELEASES_URL", release_file("v0.0.1"))
 
@@ -315,6 +316,7 @@ class TestResultCallback:
         release_file: Callable[[str], str],
     ) -> None:
         monkeypatch.delenv("CCE_DISABLE_UPDATE_CHECK")
+        monkeypatch.delenv("CI", raising=False)
         monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg-cache"))
         monkeypatch.setenv("CCE_RELEASES_URL", release_file("v0.0.1"))
 

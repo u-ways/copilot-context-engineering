@@ -14,6 +14,8 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+import typer
+
 from cce import CceError, __version__
 from cce.log import get_logger
 
@@ -57,6 +59,11 @@ def default_run(argv: Sequence[str]) -> int:
     return subprocess.run(list(argv), check=False).returncode
 
 
+def default_confirm(question: str) -> bool:
+    """The only prompt in ``cce``: a Y/n question on stderr, defaulting to yes."""
+    return typer.confirm(question, default=True, err=True)
+
+
 def parse_version(tag: str) -> tuple[int, int, int] | None:
     match = _VERSION_RE.match(tag.strip())
     if match is None:
@@ -91,7 +98,7 @@ def maybe_notify(
     fetch: Fetcher = default_fetch,
     now: Clock,
     is_tty: Callable[[], bool],
-    confirm: Confirm,
+    confirm: Confirm = default_confirm,
     run: Runner = default_run,
     current: str = __version__,
 ) -> None:
