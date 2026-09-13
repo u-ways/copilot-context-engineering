@@ -9,6 +9,7 @@ A hands-on playground that answers one question for GitHub Copilot CLI: *should 
 | Always loaded? | Yes | No, only when relevant | No, dispatched |
 | Adaptive? | No, static text | Yes | Yes |
 | Size concern? | Paid on every request | Only when matched | Separate context |
+| Can you restrict its tools? | No | No | Yes, a per-role `tools` list (scenario 05) |
 
 TL;DR: Instructions = "Always follow these rules." Skill = "When doing X, here is how." Agent = "Go do this and come back."
 
@@ -32,15 +33,19 @@ Upgrade with `cce update`. The CLI also checks GitHub Releases at most once a da
 ## Quickstart
 
 ```sh
+cce doctor     # check this machine; read every warn row
 cce setup      # clone the base repository and prepare every scenario
 cce list       # one row per scenario with its status
 cce path 3     # print the worktree path of scenario 03
+cd "$(cce path 3)" && copilot   # run the scenario in its worktree
 cce guide 3    # read the guide for scenario 03
 cce reset 3    # return scenario 03 to its committed baseline
 cce teardown   # remove the workspace
 ```
 
 The workspace lives under the XDG data directory (default `~/.local/share/cce`) or wherever `CCE_WORKSPACE` points. Scenario ids accept `3`, `03`, `03-skills-on-demand` or `skills-on-demand`.
+
+Before the first scenario run `cce doctor` (no `fail` rows; every `warn` names personal skills, agents or hooks under `~/.copilot` or `~/.claude` that change what you see) and confirm `copilot` starts without a login prompt.
 
 The decisions behind every command are recorded in [docs/adrs/README.md](docs/adrs/README.md).
 
@@ -61,7 +66,7 @@ Read a guide without a checkout with `cce guide 3` (or `cce guide presenting`).
 
 The base content is [NHSDigital/software-engineering-quality-framework](https://github.com/NHSDigital/software-engineering-quality-framework), fetched at runtime at a pinned commit. That repository has no licence, so none of its content is redistributed here: it is cloned into your workspace when you run `cce setup`, and every scenario is a git worktree of it with a small overlay of Copilot customisation files committed as a resettable baseline. `cce reset` takes a scenario back to that baseline; `cce teardown` removes the whole workspace.
 
-Overlays are stored in this package without leading dots (`github/copilot-instructions.md` rather than `.github/copilot-instructions.md`) so that packaging and ignore rules never drop them, and they are rendered at setup time. Where an overlay needs upstream text, an include directive pulls it from the clone into the worktree; that text is never part of this repository.
+Overlays are stored in this package without leading dots (`github/copilot-instructions.md` rather than `.github/copilot-instructions.md`) so that packaging and ignore rules never drop them, and they are rendered at setup time. Where an overlay needs upstream text, an include directive pulls it from the clone into the worktree; that text is never part of this repository. `cce setup --dialect claude` renders the same overlays into Claude Code's layout (`CLAUDE.md`, `.claude/skills`, `.claude/agents`) through the translator in `src/cce/dialect.py`. `just llm copilot` or `just llm claude` runs the scenario prompts through the real agents and asserts which skills loaded, which files changed and the token ratios between runs.
 
 Presenter mode is opt-in via `cce setup --herdr`, which lays out one herdr workspace per scenario with its guide, its rendered overlay and a Copilot tab. It is never auto-detected: without the flag, `cce` does not talk to herdr at all.
 

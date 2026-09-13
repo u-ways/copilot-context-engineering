@@ -43,12 +43,14 @@ Fill in the table as you go:
 
 For scale, one measured run of both beats through the non-interactive `copilot -p` runner (Copilot CLI 1.0.83, the default model) gave:
 
-| Run | Main thread, cumulative input tokens | Main thread, final call | Subagents, cumulative input tokens |
-| --- | --- | --- | --- |
-| A, delegated | 57,852 | 19,543 | 933,233 |
-| B, `--agent auditor` | 341,578 | 89,442 | 0 |
+| Run | Main thread, cumulative input tokens | Main thread, final call | Subagents, cumulative input tokens | Total input tokens |
+| --- | --- | --- | --- | --- |
+| A, delegated | 57,852 | 19,543 | 933,233 | 991,085 |
+| B, `--agent auditor` | 341,578 | 89,442 | 0 | 341,578 |
 
-The work is the same size either way; delegation decides whose context pays for it. `just llm copilot` in this repository re-measures these figures.
+Delegation isolates the parent's context; it does not make the work cheaper. The delegated run spent almost three times as many tokens overall, because the subagent re-read files across several calls. `/usage` shows the whole spend; `/context` shows whose context carries it. `just llm copilot` in this repository re-measures these figures.
+
+Claude Code 2.1.270 is a second data point on the same prompts: delegated, 70,316 input tokens cumulative in the main thread and 1,041,446 in subagents; direct, 791,339 in the main thread. `just llm claude` re-measures those.
 
 ### The number
 

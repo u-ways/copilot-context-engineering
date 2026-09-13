@@ -40,9 +40,20 @@ Binding rules for any coding agent, and any human, working in this repository.
 | `just slides` | Render the developer deck to `dist/slides.html` with Marp (needs `npx`) |
 | `just clean` | Remove build, cache and coverage artefacts |
 
-## Layout
+## Environment
 
-Modules and directories marked with a PR number arrive in that later pull request.
+| Variable | Effect |
+| --- | --- |
+| `CCE_WORKSPACE` | Workspace path override; default `$XDG_DATA_HOME/cce`, then `~/.local/share/cce` |
+| `CCE_LOG_FORMAT` | Log renderer on stderr: `console` (default) or `json` |
+| `CCE_UPDATE_INTERVAL` | Seconds between release checks; default `86400` |
+| `CCE_DISABLE_UPDATE_CHECK` | Any value switches the release check off; `CI` does the same |
+| `CCE_RELEASES_URL` | Endpoint consulted for the latest release (tests and forks) |
+| `CCE_LLM_RUNTIME` | Default runtime for `just llm` (the `--runtime` pytest option): `copilot` or `claude` |
+| `CCE_LLM_MODEL` | Passed to the runtime as `--model` |
+| `CCE_LLM_ISOLATE` | `1` runs Copilot under a scratch `COPILOT_HOME`; needs `COPILOT_GITHUB_TOKEN` |
+
+## Layout
 
 ```text
 .editorconfig  .gitignore  .python-version  AGENTS.md  CLAUDE.md  LICENSE  README.md
@@ -51,31 +62,31 @@ justfile  pyproject.toml  uv.lock
     dependabot.yml                 uv and github-actions, weekly
     adr-review/prompt.md           prompt for the ADR review workflow
     workflows/                     ci, security, adr-review, dependabot-auto-merge,
-                                   release-drafter, release; e2e (PR4), llm-tests (PR8)
+                                   release-drafter, release, e2e, llm-tests
 docs/
     RELEASING.md                   release and update process
     adrs/                          index plus ADR-0001..0010; ADRs win over other docs
-    scenarios/                     one guide per scenario slug, shipped as cce/guides (PR6)
-    presenting.md                  presenter guide (PR6)
+    scenarios/                     one guide per scenario slug, shipped as cce/guides
+    presenting.md                  presenter guide
 scripts/
-    s06_ground_truth.py            dev-only ground truth for scenario 06 (PR4)
+    s06_ground_truth.py            dev-only ground truth for scenario 06
 src/cce/
     __init__.py                    __version__ and CceError
     __main__.py                    python -m cce
     cli.py                         Typer app; the only module that prints or exits
-    log.py                         structlog to stderr, console or json (PR2)
-    manifest.py                    scenarios.toml loader, id parsing, front matter (PR2)
-    doctor.py                      environment checks (PR2)
-    render.py                      overlay directives to planned files (PR3)
-    dialect.py                     Copilot to Claude Code layout translator (PR3)
-    workspace.py                   pinned clone, worktrees, baselines, lock (PR4)
-    update.py                      throttled release check and cce update (PR5)
-    herdr.py                       opt-in presenter layout (PR7)
+    log.py                         structlog to stderr, console or json
+    manifest.py                    scenarios.toml loader, id parsing, front matter
+    doctor.py                      environment checks
+    render.py                      overlay directives to planned files
+    dialect.py                     Copilot to Claude Code layout translator
+    workspace.py                   pinned clone, worktrees, baselines, lock
+    update.py                      throttled release check and cce update
+    herdr.py                       opt-in presenter layout
     overlays/                      scenarios.toml, _shared procedures, agents and
-                                   scripts, one directory per scenario (PR3)
+                                   scripts, one directory per scenario
 tests/
     conftest.py  support/  fakes/  fixtures, synthetic upstream, herdr and uv shims
     test_*.py                      default tier, offline
-    e2e/                           real pinned clone, marker e2e (PR4)
-    llm/                           opt-in LLM tier, marker llm (PR8)
+    e2e/                           real pinned clone, marker e2e
+    llm/                           opt-in LLM tier, marker llm
 ```

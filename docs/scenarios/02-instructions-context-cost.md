@@ -2,7 +2,7 @@
 
 ## What it shows
 
-This scenario's `.github/copilot-instructions.md` inlines all eight framework procedures, about 404 KB of upstream text rendered at setup time, under a header that declares every procedure policy to be read before any task. Copilot CLI 1.0.83 loads the file in full: in our measurement a one-word reply cost 98,980 input tokens.
+This scenario's `.github/copilot-instructions.md` inlines all eight framework procedures, about 404 KB of upstream text rendered at setup time, under a header that declares every procedure policy to be read before any task. Copilot CLI loads the file in full: in one measured run through the non-interactive `copilot -p` runner (Copilot CLI 1.0.83, the default model) a one-line reply cost 100,756 input tokens; `just llm copilot` re-measures it. Claude Code 2.1.270 is a second data point for the same lookup: 147,581 input tokens here against 19,461 in scenario 03.
 
 The prompt is a one-fact lookup in one file. None of the eight procedures helps with it, yet all of them sit in context on every turn. Scenario 03 ships the same procedures as skills and serves as the control.
 
@@ -50,7 +50,7 @@ Fill in the table as you go:
 
 - The answer is 28 in every run, cited at `insights/metrics.md:24` or `insights/metrics.md:33`. Re-derive: `grep -n '28 days' insights/metrics.md`.
 - The distractor is "monthly" at `insights/metrics.md:12`, which is how often the figures are tracked, not the window they are calculated over. Re-derive: `grep -n -i monthly insights/metrics.md`. The prompt asks "how many days" for that reason.
-- Row (a) starts with the context nearly full before you type: close to 99k tokens for the instructions alone. Rows (b) and (c) start close to empty. Re-derive the size: `wc -c .github/copilot-instructions.md` in scenario 02, then the same command in scenario 03.
+- Row (a) starts with the context nearly full before you type: about 100k tokens for the instructions alone. Rows (b) and (c) start close to empty. Re-derive the size: `wc -c .github/copilot-instructions.md` in scenario 02, then the same command in scenario 03.
 - Same answer, same citation, a fraction of the input tokens. In (a) every later turn pays the same again, because instructions are resent with each request.
 - In (c), `/skills` lists eight skills and none loads: the reply carries no `procedure:` line.
 

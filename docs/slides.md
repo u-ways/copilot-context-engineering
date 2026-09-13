@@ -65,6 +65,7 @@ https://github.com/u-ways/copilot-context-engineering
 | Always loaded? | Yes | No, only when relevant | No, dispatched |
 | Adaptive? | No, static text | Yes | Yes |
 | Size concern? | Paid on every request | Only when matched | Separate context |
+| Can you restrict its tools? | No | No | Yes, a per-role `tools` list (scenario 05) |
 
 TL;DR: Instructions = "Always follow these rules." Skill = "When doing X, here is how." Agent = "Go do this and come back."
 
@@ -369,6 +370,7 @@ cce guide 1    # start here; about five minutes per scenario
 | Always loaded? | Yes | No, only when relevant | No, dispatched |
 | Adaptive? | No, static text | Yes | Yes |
 | Size concern? | Paid on every request | Only when matched | Separate context |
+| Can you restrict its tools? | No | No | Yes, a per-role `tools` list (scenario 05) |
 
 TL;DR: Instructions = "Always follow these rules." Skill = "When doing X, here is how." Agent = "Go do this and come back."
 

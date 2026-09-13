@@ -57,8 +57,8 @@ done
 
 - `head -3 .github/skills/seqf-procedure-7/SKILL.md` shows the description about rewriting a Markdown page to the framework's conventions; the first `grep -l` shows the conversion body actually lives in `seqf-procedure-8`, whose description is about engineering maturity; the second `grep -l` shows the publishing body is in `seqf-procedure-7`.
 - `/skills` in Copilot shows the same eight names with the same rotated descriptions: name on the left, description on the right. Copilot matches the task against the right-hand column only.
-- After the prompt, `/skills` shows `seqf-procedure-7` loaded, and only that one.
-- The reply ends with `procedure: publish-and-open-source-a-repository`. The "conversion plan" talks about licences, repository hardening, secret scanning and signed commits, and says nothing about H1s, tables of contents or markdownlint.
+- After the prompt, `/skills` shows `seqf-procedure-7` loaded, and only that one. This is the proof, and it does not depend on the model.
+- The reply usually ends with `procedure: publish-and-open-source-a-repository`, the publishing tracer. The plan text varies with the model: licences, repository hardening, secret scanning and signed commits if it followed the wrong body, or a competent conversion plan about H1s, tables of contents and markdownlint if it noticed the mismatch and answered from the page itself.
 - `/context` grew by the publishing body (about 52 KB), not by the conversion body (about 27 KB). Re-derive: `wc -c .github/skills/seqf-procedure-7/SKILL.md .github/skills/seqf-procedure-8/SKILL.md`.
 - `git status --porcelain` is empty.
 

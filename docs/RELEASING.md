@@ -9,6 +9,11 @@
 5. Click **Publish**.
 6. Users run `cce update`.
 
+## Owner setup (one-time)
+
+1. Branch protection on `main` requiring the status checks `quality`, `test`, `smoke (ubuntu-latest)`, `smoke (macos-latest)` and `adr-review`, with the branch required to be up to date (strict), conversation resolution required, and the rules applied to administrators.
+2. Add `RELEASE_AUTOMATION_TOKEN` under Settings > Secrets and variables > Dependabot, not Actions: a Dependabot merge made with that token pushes to `main` as a user, so it triggers CI and the Release Drafter. Without it the auto-merge falls back to `GITHUB_TOKEN`, whose pushes trigger neither.
+
 ## Version management
 
 Versions follow [SemVer](https://semver.org/) and are static: no version is derived from git at build time.
@@ -99,3 +104,6 @@ uv tool install --force "copilot-context-engineering @ git+https://github.com/u-
 | `CCE_WORKSPACE` | Workspace path override | `$XDG_DATA_HOME/cce`, falling back to `~/.local/share/cce` |
 | `CCE_LOG_FORMAT` | Log renderer on stderr: `console` or `json` | `console` |
 | `CCE_RELEASES_URL` | Endpoint consulted for the latest release (tests and forks) | the GitHub `releases/latest` API |
+| `CCE_LLM_RUNTIME` | Default runtime for `just llm` (the `--runtime` pytest option) | `copilot` |
+| `CCE_LLM_MODEL` | Passed to the LLM runtime as `--model` | unset, the runtime's default model |
+| `CCE_LLM_ISOLATE` | `1` runs Copilot under a scratch `COPILOT_HOME`; needs `COPILOT_GITHUB_TOKEN` | unset |

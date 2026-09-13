@@ -7,25 +7,37 @@ A run-of-show for giving the six scenarios as a live talk. Each scenario has its
 Do these before the talk, not on stage:
 
 - `cce doctor` reports no `fail` rows. Read every `warn` row: it names personal skills, agents, hooks or instructions under `~/.copilot` or `~/.claude` that will show up in `/skills` or change behaviour. Move them aside for the talk, or expect to explain the extra entries.
+- Or isolate instead of moving: run the talk's sessions with `COPILOT_HOME` (and `CLAUDE_CONFIG_DIR` for Claude Code) pointed at a scratch directory, for example `export COPILOT_HOME="$(mktemp -d)"`. A fresh `COPILOT_HOME` hides the credentials that `copilot /login` stored, so also pass `COPILOT_GITHUB_TOKEN="$(gh auth token)"` in that terminal.
 - `cce setup` has run and `cce list` shows every scenario as `ready`.
 - Copilot CLI is logged in (`copilot` starts without a login prompt) and is version 1.0.83 or later.
+- Export `CCE_DISABLE_UPDATE_CHECK=1` in the terminal you present from: the once-a-day release check runs after any successful command, including `cce reset N`, and its Y/n prompt defaults to yes.
 - Terminal font and size: `/context` and `/skills` output should be readable from the back of the room. Test at the projector's resolution.
 - Have `cce guide N` open in a second pane for each scenario, or use presenter mode below (`cce setup --herdr` inside herdr).
 
 ## Run of show
 
-Order 01 to 06. About 5 minutes per scenario, 30 minutes in total plus questions.
+Order 01 to 06. The beat counts below add up to thirteen live sessions (plus `./STRUGGLE.sh`, which prints and exits), and the beats are not equal: scenario 04 is one prompt, while scenario 06's two runs are the slowest (in one measured Copilot run roughly two and a half minutes delegated and just over one minute direct, before reading `/context`). Give scenario 06 eight minutes, budget the others by their beat count, and never leave 06 last with no slack behind it.
 
-| # | Scenario | The beat |
-| --- | --- | --- |
-| 01 | instructions-timeless | One prompt reverts three real upstream changes because the instructions froze a table in time; the durable rules leave the file alone. |
-| 02 | instructions-context-cost | A one-fact lookup costs close to 99k input tokens with the procedures inlined, and a fraction of that without them. |
-| 03 | skills-on-demand | The same procedures as skills: the lookup loads nothing; the conversion prompt loads exactly one, and the tracer line proves it. |
-| 04 | skills-description-routing | Rotate the descriptions and the conversion prompt loads the publishing procedure; the names never mattered. |
-| 05 | agent-permissions | Same prompt, two agents: the researcher cannot write the file, the author does; the validator reports and fixes nothing by convention. |
-| 06 | agent-context-isolation | Delegated, the audit returns two lines and your context stays small; run directly, 48 file reads land in your session. |
+| # | Scenario | Beats | The beat |
+| --- | --- | --- | --- |
+| 01 | instructions-timeless | 3 | One prompt reverts three real upstream changes because the instructions froze a table in time; the durable rules leave the file alone. |
+| 02 | instructions-context-cost | 3 | A one-fact lookup costs about 100k input tokens with the procedures inlined, and a fraction of that without them. |
+| 03 | skills-on-demand | 2 | The same procedures as skills: the lookup loads nothing; the conversion prompt loads exactly one, and the tracer line proves it. |
+| 04 | skills-description-routing | 1 | Rotate the descriptions and the conversion prompt loads the publishing procedure; the names never mattered. |
+| 05 | agent-permissions | 3 (+ `./STRUGGLE.sh`) | Same prompt, two agents: the researcher cannot write the file, the author does; the validator reports and fixes nothing by convention. |
+| 06 | agent-context-isolation | 2 | Delegated, the audit returns two lines and your context stays small; run directly, 48 file reads land in your session. |
+
+Scenario 02's data point (c) is scenario 03's lookup, run once and counted under 03.
 
 Open with the TL;DR from the README (instructions are "always follow these rules", a skill is "when doing X, here is how", an agent is "go do this and come back") and close with the comparison table.
+
+## Bring the room in
+
+Three beats work best as a guess first, then the number:
+
+- 02: before typing anything, ask how many input tokens the first `/context` will show. Rooms guess an order of magnitude low.
+- 04: after `ls .github/skills`, ask which skill will load. The names lie; only the description column routes.
+- 06: ask whether the two runs will cost the same. Total tokens and whose context pays are different questions, and the room usually conflates them.
 
 ## Reset discipline
 
@@ -45,6 +57,7 @@ Within a beat, follow the observation protocol printed in each guide: `/context`
 
 - Opt-in only. Nothing herdr-related happens without the flag, and the flag refuses to run unless `HERDR_ENV=1` is set exactly and `herdr` is on the path.
 - It creates a `DEMO` workspace (this page in one tab, `cce list` in another) plus one herdr workspace per scenario, each with tabs for the guide, the rendered overlay files and a `copilot` session in the worktree. Scenario 06 gets a second Copilot tab running `copilot --agent auditor` for run B.
+- Both scenario 06 runs leave the worktree untouched, so they can overlap: start run A in the `copilot` tab and run B in the `copilot:auditor` tab while A is still reading. Never overlap two beats that both write to the same worktree.
 - Workspaces are labelled `cce:demo` and `cce:<slug>`. If any of those labels already exists, the command refuses (exit 3) rather than creating duplicates; run `cce teardown --herdr` first.
 - `cce teardown --herdr` closes only the workspaces it created, then removes the cce workspace as usual.
 
@@ -56,3 +69,9 @@ Within a beat, follow the observation protocol printed in each guide: `/context`
 - A different number comes back (a coverage citation other than `practices/testing.md:144`, a heading count other than 218). Run the re-derivation one-liner from the guide live; the ground truth is in the worktree and takes seconds to show.
 - A skill loads that should not have, or the wrong one loads in scenario 03. Check the prompt was sent verbatim: the words "table" and "format" in particular trigger skills. Reset and resend.
 - The worktree is in a strange state. `cce reset N`, or `cce setup N --force` if the reset is refused.
+
+## Fallbacks
+
+- Record each beat the day before into `.cce-artifacts/stage/` with any terminal recorder (`script` is everywhere; `asciinema` if it is available). The recordings contain upstream prose, so they stay local: `.cce-artifacts/` is gitignored, and nothing under it is committed or uploaded except the structural result JSON (ADR-0003, ADR-0010).
+- A dead network: the measured figures committed in the guides and the slides survive it. Talk through them over the recording.
+- A model refusal: the guide's "two valid outcomes" text survives it. Scenario 01 is written for both branches, and a refusal is the lesson from the other side.

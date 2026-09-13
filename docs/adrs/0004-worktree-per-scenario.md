@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: the `cce doctor` bullet in Decision was not implemented as written. Workspace path, status and overlay drift are reported by `cce list` and `cce path`; `cce doctor` checks the machine and renders every overlay against placeholder text (ADR-0006).
 
 ## Context
 
