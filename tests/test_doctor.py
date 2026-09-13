@@ -23,6 +23,9 @@ title = "Only"
 
 
 def real_run(argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+    """Real git; a canned Copilot CLI so the suite does not depend on it being installed."""
+    if argv[0] == "copilot":
+        return subprocess.CompletedProcess(list(argv), 0, "GitHub Copilot CLI 1.0.83.\n", "")
     return subprocess.run(list(argv), capture_output=True, text=True, check=False)
 
 
