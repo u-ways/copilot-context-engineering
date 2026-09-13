@@ -42,45 +42,13 @@ def build(root: Path, targets: Iterable[IncludeTarget]) -> SyntheticUpstream:
         _write(root / target.path, f"Placeholder for {target.path} (synthetic upstream)\n")
     _write(root / "blueprints.md", f"| Topic |\n| --- |\n| {NEW_MARKER} |\n")
     _write(root / "inert.md", f"An included file keeps this literal line:\n{INERT_LINE}\n")
+    (root / "latin1.md").write_bytes(b"caf\xe9 (not UTF-8)\n")
     _write(root / ".gitignore", "*.sh\n")
     _commit(root, "Current tree with placeholders", "2026-06-01T00:00:00Z")
     _write(root / "README.md", "# Synthetic upstream\n\nInvented content for tests, revised.\n")
     _commit(root, "Revise readme", "2026-07-01T00:00:00Z")
     head = _git(root, "rev-parse", "HEAD").strip()
     return SyntheticUpstream(path=root, head=head)
-
-
-class GitUpstream:
-    """An :class:`cce.render.UpstreamReader` backed by ``git show`` on a repository."""
-
-    def __init__(self, repository: Path, ref: str) -> None:
-        self._repository = repository
-        self._ref = ref
-
-    def read(self, path: str) -> bytes:
-        return self._show(self._ref, path)
-
-    def read_asof(self, path: str, date: str) -> bytes:
-        revision = _git(
-            self._repository, "rev-list", "-1", f"--before={date}T23:59:59Z", self._ref, "--", path
-        ).strip()
-        if not revision:
-            raise FileNotFoundError(f"{path} has no revision on or before {date}")
-        return self._show(revision, path)
-
-    def tracked_paths(self) -> frozenset[str]:
-        listing = _git(self._repository, "ls-tree", "-r", "--name-only", self._ref)
-        return frozenset(line for line in listing.split("\n") if line)
-
-    def _show(self, revision: str, path: str) -> bytes:
-        completed = subprocess.run(
-            ["git", "-C", str(self._repository), "show", f"{revision}:{path}"],
-            capture_output=True,
-            check=False,
-        )
-        if completed.returncode != 0:
-            raise FileNotFoundError(f"{path} is not in {revision}")
-        return completed.stdout
 
 
 def _write(path: Path, text: str) -> None:

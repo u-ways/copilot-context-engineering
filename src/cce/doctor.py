@@ -102,10 +102,18 @@ def _python(environment: Environment) -> Check:
     return Check("python", Status.OK, version)
 
 
+def _probe(environment: Environment, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
+    """Run a probe; a crash or timeout becomes a non-zero result, never an exception."""
+    try:
+        return environment.run(argv)
+    except (OSError, subprocess.SubprocessError) as error:
+        return subprocess.CompletedProcess(list(argv), 1, "", str(error))
+
+
 def _git(environment: Environment) -> Check:
     if environment.which("git") is None:
         return Check("git", Status.FAIL, "git is not on PATH")
-    completed = environment.run(["git", "--version"])
+    completed = _probe(environment, ["git", "--version"])
     match = re.search(r"(\d+)\.(\d+)", completed.stdout)
     if completed.returncode != 0 or match is None:
         return Check("git", Status.FAIL, "git --version did not report a version")
@@ -121,10 +129,7 @@ def _copilot(environment: Environment) -> Check:
     """Copilot CLI presence and version; the recorded scenario numbers assume 1.0.83."""
     if environment.which("copilot") is None:
         return Check("copilot", Status.WARN, "not found on PATH (install GitHub Copilot CLI)")
-    try:
-        completed = environment.run(["copilot", "--version"])
-    except (OSError, subprocess.SubprocessError) as error:
-        return Check("copilot", Status.WARN, f"copilot --version failed: {error}")
+    completed = _probe(environment, ["copilot", "--version"])
     match = re.search(r"(\d+)\.(\d+)\.(\d+)", completed.stdout + completed.stderr)
     if completed.returncode != 0 or match is None:
         return Check("copilot", Status.WARN, "copilot --version did not report a version")
@@ -208,9 +213,15 @@ def _overlays(manifest: Manifest) -> Check:
 def _upstream(environment: Environment, manifest: Manifest, *, offline: bool) -> Check:
     if offline:
         return Check("upstream", Status.OK, "skipped (--offline)")
-    completed = environment.run(["git", "ls-remote", "--exit-code", "--heads", manifest.source_url])
+    completed = _probe(
+        environment, ["git", "ls-remote", "--exit-code", "--heads", manifest.source_url]
+    )
     if completed.returncode != 0:
-        return Check("upstream", Status.FAIL, f"cannot reach {manifest.source_url}")
+        return Check(
+            "upstream",
+            Status.FAIL,
+            f"cannot reach {manifest.source_url} (skip this check with --offline)",
+        )
     return Check(
         "upstream",
         Status.OK,

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: a `checked_at` in the future (a wrong clock, a restored cache) no longer disables the check; only an elapsed time between zero and the interval throttles it.
 - Revision 2026-09-13: the prompt is reachable only when stdin, stdout and stderr are all TTYs, so `cd "$(cce path N)"` and piped guide tabs never block on it.
 - Revision 2026-09-13: `cce update [--check]`, the result-callback wiring and the `CCE_RELEASES_URL` override (a `file://` or https URL used by tests and forks instead of the GitHub API) land with `src/cce/update.py`.
 

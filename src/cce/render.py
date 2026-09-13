@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Protocol
 
 from cce import CceError
-from cce.dialect import COPILOT_TOOLS
+from cce.dialect import COPILOT_TOOLS, Dialect, translate
 from cce.manifest import (
     FrontMatterValue,
     Manifest,
@@ -153,8 +153,14 @@ def plan_scenario(
     manifest: Manifest,
     upstream: UpstreamReader,
     root: Path = OVERLAYS_ROOT,
+    *,
+    dialect: Dialect = Dialect.COPILOT,
 ) -> list[PlannedFile]:
-    """Every file the scenario lands in its worktree, sorted by destination."""
+    """Every file the scenario lands in its worktree for ``dialect``, sorted by destination.
+
+    Validation runs on the translated destinations, so a Claude-dialect plan is
+    checked against upstream-tracked paths such as ``CLAUDE.md`` too.
+    """
     procedures = load_procedures(manifest, root)
     by_name = {procedure.name: procedure for procedure in procedures}
     planned: list[PlannedFile] = []
@@ -162,6 +168,7 @@ def plan_scenario(
     planned.extend(_skills(scenario, procedures, upstream, by_name))
     planned.extend(_agents(scenario, upstream, by_name, root))
     planned.extend(_files(scenario, upstream, by_name, root))
+    planned = translate(planned, dialect)
     _validate(planned, upstream, scenario)
     return sorted(planned, key=lambda file: file.dest)
 

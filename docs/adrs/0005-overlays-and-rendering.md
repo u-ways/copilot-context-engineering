@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: `plan_scenario` takes the dialect and validates the translated destinations, so a Claude-dialect plan is checked against upstream-tracked paths such as `CLAUDE.md`.
 
 ## Context
 

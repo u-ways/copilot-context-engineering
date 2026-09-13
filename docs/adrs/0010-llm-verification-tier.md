@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: runners keep the partial transcript when an agent times out and fail loudly, with the agent's stderr, when it exits non-zero without output, so a failed launch is never graded as a wrong answer.
 - Revision 2026-09-13: accepted when the tier landed (`tests/llm/`, `just llm`, `llm-tests.yml`, `[[scenario.checks]]` and `[[compare]]` in the manifest).
 - Revision 2026-09-13: `RunResult` also carries `main_input_tokens` and `subagent_input_tokens` (Copilot from the usage file's `agentMetrics`; Claude from top-level versus subagent `assistant` events); scenario 06's `[[compare]]` entries assert on them, and a compare entry may set `right_metric` to compare two different metrics. The isolation bullet is corrected to match the code: `CLAUDE_CONFIG_DIR` whenever `CLAUDE_CODE_OAUTH_TOKEN` is set, `COPILOT_HOME` only when `COPILOT_GITHUB_TOKEN` is set and `CCE_LLM_ISOLATE=1`, both under `.cce-artifacts/transcripts/<runtime>/`.
 

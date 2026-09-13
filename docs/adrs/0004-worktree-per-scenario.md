@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: `setup` refuses a directory that already holds files cce did not create, before writing the marker or the lock; an unreadable or foreign-schema `state.json` is a refused precondition (exit 3, remedy `cce teardown --force`, which is the one command that tolerates it), so `cce list` can exit 3 in that single case; teardown removes the tree while the lock is still held; the workspace root is resolved once so every printed path agrees.
 - Revision 2026-09-13: the `cce doctor` bullet in Decision was not implemented as written. Workspace path, status and overlay drift are reported by `cce list` and `cce path`; `cce doctor` checks the machine and renders every overlay against placeholder text (ADR-0006).
 
 ## Context

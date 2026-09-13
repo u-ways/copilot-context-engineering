@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: `--source-ref` must be a 40-hexadecimal-digit commit sha like the manifest's pin (a branch name would silently freeze at the clone-time snapshot); anything else is a usage error. Upstream blobs are read as bytes so a non-UTF-8 file reaches the renderer's own error path.
 
 ## Context
 

@@ -91,6 +91,17 @@ class TestSkips:
 
         assert len(recorder.fetched) == 2
 
+    def test_a_future_timestamp_does_not_disable_the_check(self, tmp_path: Path) -> None:
+        recorder = Recorder(b'{"tag_name": "v0.1.0"}')
+        cache = tmp_path / "cache" / "update-check.json"
+        cache.parent.mkdir(parents=True)
+        cache.write_text(json.dumps({"checked_at": recorder.clock + 10_000_000}))
+
+        recorder.notify(tmp_path)
+
+        assert len(recorder.fetched) == 1
+        assert json.loads(cache.read_text())["checked_at"] == recorder.clock
+
     def test_timestamp_is_written_before_fetching_so_failures_are_not_retried(
         self, tmp_path: Path
     ) -> None:

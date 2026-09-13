@@ -46,6 +46,11 @@ class ManifestError(CceError):
     """The packaged manifest or an overlay front matter block is malformed."""
 
 
+def is_commit_sha(ref: str) -> bool:
+    """True when ``ref`` is a 40-hexadecimal-digit commit sha (ADR-0003)."""
+    return bool(_SHA_RE.match(ref))
+
+
 @dataclass(frozen=True, slots=True)
 class SkillsSpec:
     """How a scenario derives its skills from the shared procedures."""
@@ -162,7 +167,7 @@ def parse(text: str) -> Manifest:
     source = _mapping(data.get("source"), "source")
     url = _string(source.get("url"), "source.url")
     ref = _string(source.get("ref"), "source.ref")
-    if not _SHA_RE.match(ref):
+    if not is_commit_sha(ref):
         raise ManifestError(f"source.ref must be a 40-character commit sha, got {ref!r}")
     raw_scenarios = data.get("scenario")
     if not isinstance(raw_scenarios, list) or not raw_scenarios:

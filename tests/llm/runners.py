@@ -50,6 +50,36 @@ class AgentRunner(Protocol):
     ) -> RunResult: ...
 
 
+def capture(argv: list[str], *, cwd: Path | None, env: Mapping[str, str], transcript: Path) -> str:
+    """Run the agent and keep its stdout as the transcript, even when it times out.
+
+    An agent that exits non-zero without producing any output (expired token,
+    unknown flag) raises with its stderr, so a failed launch is never mistaken
+    for a wrong answer.
+    """
+    try:
+        completed = subprocess.run(
+            argv,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=dict(env),
+            timeout=RUN_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        partial = error.stdout
+        transcript.write_bytes(partial if isinstance(partial, bytes) else (partial or "").encode())
+        raise
+    transcript.write_text(completed.stdout, encoding="utf-8")
+    if completed.returncode != 0 and not completed.stdout.strip():
+        raise RuntimeError(
+            f"{argv[0]} exited {completed.returncode} with no output: "
+            f"{completed.stderr.strip()[-500:]}"
+        )
+    return completed.stdout
+
+
 def files_changed(worktree: Path) -> list[str]:
     completed = subprocess.run(
         ["git", "status", "--porcelain"], cwd=worktree, capture_output=True, text=True, check=True
@@ -159,16 +189,8 @@ class CopilotRunner:
         env = dict(self._env)
         if env.get("COPILOT_GITHUB_TOKEN") and env.get("CCE_LLM_ISOLATE") == "1":
             env["COPILOT_HOME"] = str(artefacts / "home-copilot")
-        completed = subprocess.run(
-            argv,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=env,
-            timeout=RUN_TIMEOUT_SECONDS,
-        )
-        transcript.write_text(completed.stdout, encoding="utf-8")
-        text, skills, tools = parse_copilot_events(completed.stdout.split("\n"))
+        stdout = capture(argv, cwd=None, env=env, transcript=transcript)
+        text, skills, tools = parse_copilot_events(stdout.split("\n"))
         usage: dict[str, Any] = {}
         if usage_path.is_file():
             usage = json.loads(usage_path.read_text(encoding="utf-8"))
@@ -282,17 +304,8 @@ class ClaudeRunner:
         env = {key: value for key, value in self._env.items() if key != "CLAUDECODE"}
         if env.get("CLAUDE_CODE_OAUTH_TOKEN"):
             env["CLAUDE_CONFIG_DIR"] = str(artefacts / "home-claude")
-        completed = subprocess.run(
-            argv,
-            cwd=worktree,
-            capture_output=True,
-            text=True,
-            check=False,
-            env=env,
-            timeout=RUN_TIMEOUT_SECONDS,
-        )
-        transcript.write_text(completed.stdout, encoding="utf-8")
-        parsed = parse_claude_events(completed.stdout.split("\n"))
+        stdout = capture(argv, cwd=worktree, env=env, transcript=transcript)
+        parsed = parse_claude_events(stdout.split("\n"))
         return RunResult(
             text=parsed.text,
             skills_loaded=parsed.skills,

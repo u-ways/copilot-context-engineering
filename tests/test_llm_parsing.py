@@ -1,9 +1,15 @@
 """LLM-tier event parsing is deterministic and offline (ADR-0010)."""
 
 import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
 
 from tests.llm.runners import (
     RunResult,
+    capture,
     copilot_agent_tokens,
     copilot_input_tokens,
     parse_claude_events,
@@ -109,3 +115,53 @@ class TestRunResult:
         assert view["text_length"] == 12
         assert len(view["text_sha256"]) == 64
         assert view["skills_loaded"] == ["a"]
+
+
+class TestCapture:
+    def test_keeps_the_transcript_and_returns_stdout(self, tmp_path: Path) -> None:
+        transcript = tmp_path / "t.jsonl"
+
+        out = capture(
+            [sys.executable, "-c", 'print(\'{"type": "x"}\')'],
+            cwd=None,
+            env={},
+            transcript=transcript,
+        )
+
+        assert out.strip() == '{"type": "x"}'
+        assert transcript.read_text().strip() == '{"type": "x"}'
+
+    def test_a_silent_failure_raises_with_stderr(self, tmp_path: Path) -> None:
+        with pytest.raises(RuntimeError, match="token expired"):
+            capture(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; sys.exit(sys.stderr.write('token expired') and 2)",
+                ],
+                cwd=None,
+                env={},
+                transcript=tmp_path / "t.jsonl",
+            )
+
+    def test_a_timeout_still_writes_the_partial_transcript(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import tests.llm.runners as runners
+
+        monkeypatch.setattr(runners, "RUN_TIMEOUT_SECONDS", 1)
+        transcript = tmp_path / "t.jsonl"
+
+        with pytest.raises(subprocess.TimeoutExpired):
+            capture(
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys, time; print('partial'); sys.stdout.flush(); time.sleep(5)",
+                ],
+                cwd=None,
+                env={},
+                transcript=transcript,
+            )
+
+        assert transcript.read_text().startswith("partial")
