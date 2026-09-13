@@ -286,10 +286,8 @@ class TestCommandLine:
 
         assert result.exit_code == 3
         assert "cce:demo" in result.stderr
-        assert [call[:2] for call in calls(herdr_env)] == [
-            ["workspace", "list"],
-            ["workspace", "list"],
-        ]
+        assert [call[:2] for call in calls(herdr_env)] == [["workspace", "list"]]
+        assert not (tmp_path / "ws" / "scenarios").exists()
 
     def test_teardown_with_the_flag_closes_recorded_workspaces(
         self, cli: CliRunner, herdr_env: Path, tmp_path: Path, upstream: SyntheticUpstream
