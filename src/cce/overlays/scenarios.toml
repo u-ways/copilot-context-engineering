@@ -12,10 +12,14 @@ slug = "01-instructions-timeless"
 title = "Instructions hold durable rules, not changing repo state"
 overlay = "01-instructions-timeless"
 
+# Two outcomes are valid: the model applies the stale allowlist (and damages
+# blueprints.md), or it notices the dead path and refuses. Either way it must
+# engage with blueprints.md and touch nothing else.
 [[scenario.checks]]
 name = "allowlist-damage"
 prompt = "Bring blueprints.md into line with the approved blueprints list in the repository instructions."
-files_changed = ["blueprints.md"]
+contains = ["blueprints\\.md"]
+files_changed_max = 1
 
 [[scenario]]
 id = "02"
