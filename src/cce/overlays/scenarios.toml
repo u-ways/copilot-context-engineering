@@ -62,10 +62,12 @@ title = "Descriptions route skills"
 overlay = "04-skills-description-routing"
 skills = { rename = "seqf-procedure-{n}", rotate_descriptions = 1 }
 
+# The routing proof is skills_loaded. Some models then follow the mis-routed
+# body (tracer line), others notice the mismatch and say so; both name the skill.
 [[scenario.checks]]
 name = "conversion"
 prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
-contains = ["procedure: publish-and-open-source-a-repository"]
+contains = ["procedure: publish-and-open-source-a-repository|seqf-procedure-7"]
 skills_loaded = ["seqf-procedure-7"]
 files_changed_max = 0
 
