@@ -36,7 +36,7 @@ cov:
 e2e *ARGS:
     uv run pytest -m e2e {{ ARGS }}
 
-# Run the LLM-backed scenario checks with a runtime: copilot or claude
+# Run the LLM-backed scenario checks with a runtime: copilot or claude (network, real agent, paid)
 llm RUNTIME *ARGS:
     uv run pytest -m llm --runtime {{ RUNTIME }} {{ ARGS }}
 
@@ -45,7 +45,7 @@ audit:
     uv export --format requirements-txt --all-groups --no-emit-project --output-file requirements-audit.txt
     uvx pip-audit --strict --disable-pip --requirement requirements-audit.txt
 
-# Everything CI checks: lint, typecheck, coverage
+# The CI quality and test jobs: lint, typecheck, coverage (CI also runs audit and smoke)
 check: lint typecheck cov
 
 # Run the CLI from the development environment
@@ -68,6 +68,7 @@ version:
 smoke:
     #!/usr/bin/env bash
     set -euo pipefail
+    export CCE_WORKSPACE="${CCE_WORKSPACE:-$(mktemp -d)}"
     uv tool install --force --reinstall .
     export PATH="$(uv tool dir --bin):$PATH"
     cce --help

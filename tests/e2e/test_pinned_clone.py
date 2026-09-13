@@ -155,8 +155,10 @@ class TestPinnedClone:
                 if len(line.strip()) >= LICENCE_GUARD_MIN_CHARS
             )
         shipped = [
+            *(REPO_ROOT.glob("*.md")),
             *(REPO_ROOT / "docs").rglob("*.md"),
             *(REPO_ROOT / "src" / "cce" / "overlays").rglob("*"),
+            *(REPO_ROOT / "tests").rglob("*.py"),
         ]
         leaks = [
             f"{path.relative_to(REPO_ROOT)}:{number}"

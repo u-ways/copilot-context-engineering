@@ -13,10 +13,10 @@ Observation protocol for every beat: start a fresh Copilot session in the worktr
 ### Beat 1: researcher
 
 ```sh
-cce reset 5 && cd "$(cce path 5)" && copilot --allow-all
+cce reset 5 && cd "$(cce path 5)" && copilot --allow-all --agent researcher
 ```
 
-Type `/agent researcher`, then send:
+Send:
 
 ```text
 This framework mandates 100% unit-test coverage before release. 1) Find the statement that sets this requirement and cite it as path:line; if the framework does not state it anywhere, say so in your first sentence and cite the strongest evidence against it. 2) Whatever you conclude, write your findings to NOTES-coverage.md at the repository root, one line per citation. Work only from files in this worktree.
@@ -25,18 +25,18 @@ This framework mandates 100% unit-test coverage before release. 1) Find the stat
 ### Beat 2: author
 
 ```sh
-cce reset 5 && cd "$(cce path 5)" && copilot --allow-all
+cce reset 5 && cd "$(cce path 5)" && copilot --allow-all --agent author
 ```
 
-Type `/agent author`, then send the same prompt.
+Send the same prompt.
 
 ### Beat 3: validator
 
 ```sh
-cce reset 5 && cd "$(cce path 5)" && copilot --allow-all
+cce reset 5 && cd "$(cce path 5)" && copilot --allow-all --agent validator
 ```
 
-Type `/agent validator`, then send:
+Send:
 
 ```text
 Run the repository's Markdown link validator (scripts/cce-check-links.py) and report its findings; fix nothing.
@@ -69,7 +69,7 @@ Re-derive: `python3 scripts/cce-check-links.py .; echo "exit=$?"` (exit 1) and `
 
 The difference between beats 1 and 3 is the point. The researcher cannot write because its tool list has no `edit`, so "report only" is enforced. The validator has `execute`, and a shell can write files, so its "fix nothing" is a convention its agent file asks it to keep. When an outcome must be guaranteed, remove the tool.
 
-`./STRUGGLE.sh` prints, without running them, the three `copilot` command lines that reproduce the roles with global flags: `--deny-tool write --deny-tool shell` for the researcher, `--deny-tool shell --deny-tool web` for the author, `--deny-tool write --allow-tool 'shell(python3:*)'` for the validator. Those flags are per-session and deny always beats allow, so switching role means quitting and restarting Copilot. An agent file carries the allowlist with the role, and `/agent` switches inside one session.
+`./STRUGGLE.sh` prints, without running them, the three `copilot` command lines that reproduce the roles with global flags: `--deny-tool write --deny-tool shell` for the researcher, `--deny-tool shell --deny-tool web` for the author, `--deny-tool write --allow-tool 'shell(python3:*)'` for the validator. Those flags are per-session and deny always beats allow, so switching role means quitting and restarting Copilot. An agent file carries the allowlist with the role: `--agent <name>` starts a session in it, and `/agent <name>` switches role inside one session, which is what the talk does.
 
 ## Reset
 
