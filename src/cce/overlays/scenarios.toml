@@ -2,7 +2,7 @@
 # Python never branches on a scenario id or slug.
 
 [source]
-url = "https://github.com/NHSDigital/software-engineering-quality-framework"
+url = "https://github.com/u-ways/software-engineering-quality-framework"
 ref = "6241aad0e6377588b624e7b5d407a6a0c3236e26"
 procedures = "_shared/procedures"
 
