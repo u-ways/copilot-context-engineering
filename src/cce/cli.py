@@ -10,7 +10,7 @@ import os
 import shutil
 import sys
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,7 +25,7 @@ from cce import manifest as manifest_module
 from cce import update as update_module
 from cce.dialect import Dialect
 from cce.log import LogFormat, configure, get_logger
-from cce.workspace import HERDR_RECORD, Status, Workspace
+from cce.workspace import HERDR_RECORD, Inspection, Status, Workspace
 
 
 def default_cache_dir(env: Mapping[str, str], home: Path) -> Path:
@@ -43,7 +43,7 @@ def after_command(*_args: object, **_options: object) -> None:
         env=os.environ,
         cache_dir=default_cache_dir(os.environ, Path.home()),
         now=time.time,
-        is_tty=lambda: sys.stdin.isatty() and sys.stderr.isatty(),
+        is_tty=lambda: sys.stdin.isatty() and sys.stdout.isatty() and sys.stderr.isatty(),
     )
 
 
@@ -91,9 +91,43 @@ def guarded[**P, R](command: Callable[P, R]) -> Callable[P, R]:
     return wrapper
 
 
+def _show_version(value: bool) -> None:
+    if value:
+        typer.echo(f"cce {__version__}")
+        raise typer.Exit()
+
+
+_STATUS_COLOURS = {"ok": typer.colors.GREEN, "warn": typer.colors.YELLOW, "fail": typer.colors.RED}
+
+
+def _scenario_rows(rows: Sequence[Inspection]) -> Iterator[str]:
+    """Aligned `id  slug  status  dialect  path` rows with the drift remedy as a suffix."""
+    width = max((len(row.scenario.slug) for row in rows), default=0)
+    for row in rows:
+        remedy = f"cce setup {row.scenario.id}" + (
+            " --force" if row.status is Status.MODIFIED else ""
+        )
+        suffix = f"  [overlay changed; run {remedy}]" if row.drifted else ""
+        dialect = row.dialect or "-"
+        yield (
+            f"{row.scenario.id}  {row.scenario.slug:<{width}}  {row.status!s:<8}  "
+            f"{dialect:<7}  {row.path}{suffix}"
+        )
+
+
 @app.callback()
 def root(
     ctx: typer.Context,
+    version_flag: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-V",
+            help="Print the installed cce version and exit.",
+            callback=_show_version,
+            is_eager=True,
+        ),
+    ] = False,
     workspace: Annotated[
         Path | None,
         typer.Option(
@@ -108,6 +142,7 @@ def root(
     ] = LogFormat.CONSOLE,
 ) -> None:
     """Prepare a local playground for GitHub Copilot CLI customisation scenarios."""
+    del version_flag  # handled eagerly by _show_version
     if verbose and quiet:
         raise typer.BadParameter("-v/--verbose and -q/--quiet are mutually exclusive")
     verbosity = -1 if quiet else min(verbose, 1)
@@ -140,8 +175,11 @@ def doctor(
     if as_json:
         typer.echo(json.dumps([check.as_dict() for check in checks], indent=2))
     else:
+        colour = False if os.environ.get("NO_COLOR") else None
         for check in checks:
-            typer.echo(check.as_row())
+            row = check.as_row()
+            status = typer.style(row[:4], fg=_STATUS_COLOURS[str(check.status)])
+            typer.echo(status + row[4:], color=colour)
     if doctor_checks.has_failures(checks):
         get_logger("cce").error("doctor found failures", exit_code=3)
         raise typer.Exit(3)
@@ -199,8 +237,8 @@ def setup(
         force=force,
         dialect=dialect,
     )
-    for row in results:
-        typer.echo(f"{row.scenario.id}  {row.scenario.slug}  {row.status}  {row.path}")
+    for line in _scenario_rows(results):
+        typer.echo(line)
     if herdr:
         layout = herdr_module.plan_layout(
             manifest,
@@ -240,9 +278,8 @@ def list_scenarios(
             )
         )
         return
-    for row in rows:
-        suffix = "  [overlay changed; run cce setup]" if row.drifted else ""
-        typer.echo(f"{row.scenario.id}  {row.scenario.slug}  {row.status}  {row.path}{suffix}")
+    for line in _scenario_rows(rows):
+        typer.echo(line)
 
 
 @app.command()
@@ -255,9 +292,9 @@ def path(
     workspace, manifest = _workspace(ctx)
     inspection = workspace.inspect(_one(manifest, scenario_id))
     if inspection.status is Status.MISSING:
-        scenario = inspection.scenario
         raise CceError(
-            f"{scenario.slug} is {inspection.detail}; run `cce setup {scenario.id}`", exit_code=3
+            f"{inspection.scenario.slug}: {inspection.detail}; run `{inspection.remedy}`",
+            exit_code=3,
         )
     typer.echo(str(inspection.path.resolve()))
 

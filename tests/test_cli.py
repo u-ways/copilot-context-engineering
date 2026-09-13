@@ -40,6 +40,20 @@ class TestNoArguments:
         assert result.stdout == ""
 
 
+class TestVersionFlag:
+    def test_dash_dash_version_prints_and_exits_zero(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["--version"])
+
+        assert result.exit_code == 0
+        assert result.stdout == f"cce {cce.__version__}\n"
+
+    def test_short_flag_works_before_a_command(self, cli: CliRunner) -> None:
+        result = cli.invoke(app, ["-V", "doctor"])
+
+        assert result.exit_code == 0
+        assert result.stdout == f"cce {cce.__version__}\n"
+
+
 class TestGlobalOptions:
     def test_verbose_and_quiet_together_are_a_usage_error(self, cli: CliRunner) -> None:
         result = cli.invoke(app, ["-v", "-q", "version"])
@@ -113,6 +127,16 @@ class TestDoctorCommand:
         rows = result.stdout.splitlines()
         assert rows[0].startswith("ok    python")
         assert any(row.startswith("ok    upstream") for row in rows)
+        assert "\x1b[" not in result.stdout
+
+    def test_colour_is_applied_only_on_a_colour_terminal(
+        self, cli: CliRunner, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("NO_COLOR", "1")
+
+        result = cli.invoke(app, ["doctor", "--offline"], color=True)
+
+        assert "\x1b[" not in result.stdout
 
     def test_json_output_is_a_list_of_checks(self, cli: CliRunner) -> None:
         result = cli.invoke(app, ["doctor", "--offline", "--json"])

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: the prompt is reachable only when stdin, stdout and stderr are all TTYs, so `cd "$(cce path N)"` and piped guide tabs never block on it.
 - Revision 2026-09-13: `cce update [--check]`, the result-callback wiring and the `CCE_RELEASES_URL` override (a `file://` or https URL used by tests and forks instead of the GitHub API) land with `src/cce/update.py`.
 
 ## Context
@@ -24,7 +25,7 @@
   - is skipped entirely when `CCE_DISABLE_UPDATE_CHECK` or `CI` is set;
   - calls the GitHub `releases/latest` API (`RELEASES_LATEST_URL`, a module constant) through an injectable fetcher callable with a 3-second timeout; tests inject a fake fetcher and never touch the network;
   - compares the response's `tag_name` (`vX.Y.Z` or `X.Y.Z`) with `cce.__version__`;
-  - when a newer version exists and both stdin and stderr are TTYs, prompts `Y/n` and on confirmation runs `uv tool upgrade copilot-context-engineering`; when not a TTY, prints one notice on stderr;
+  - when a newer version exists and stdin, stdout and stderr are all TTYs, prompts `Y/n` and on confirmation runs `uv tool upgrade copilot-context-engineering`; when not a TTY, prints one notice on stderr;
   - wraps its whole body in a top-level `except Exception` that logs at debug level, so the command's exit code never changes (raising fetcher, malformed JSON, a 404 before the first release, an unwritable cache).
 - `cce update [--check]` fetches the same endpoint, prints the current and latest versions and, unless `--check` is given, runs `uv tool upgrade copilot-context-engineering` when the release is newer (uv missing exits 3, a failed upgrade exits 1). `CCE_RELEASES_URL` overrides the endpoint for tests and forks.
 

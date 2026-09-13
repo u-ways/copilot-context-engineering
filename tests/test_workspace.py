@@ -245,7 +245,8 @@ class TestBaselineRef:
 
         _, out, _ = play.run("list")
 
-        assert "02-instructions-context-cost  ready" in out
+        row = next(line for line in out.split("\n") if "02-instructions-context-cost" in line)
+        assert row.split()[2] == "ready"
 
     def test_reset_uses_the_baseline_ref(self, play: Playground) -> None:
         play.setup("2")
@@ -297,9 +298,17 @@ class TestReset:
         assert "skipping missing scenario" in err
 
     def test_reset_of_a_missing_scenario_is_refused(self, play: Playground) -> None:
+        play.setup("1")
+
         code, out, err = play.run("reset", "2")
 
-        assert code == 3 and out == "" and "cce setup 02" in err
+        assert code == 3 and out == "" and "run `cce setup 02`" in err
+
+    def test_reset_without_a_workspace_creates_nothing(self, play: Playground) -> None:
+        code, out, err = play.run("reset", "2")
+
+        assert code == 3 and out == "" and "not a cce workspace" in err
+        assert not play.root.exists()
 
 
 class TestTeardown:

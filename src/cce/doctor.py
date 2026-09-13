@@ -21,6 +21,7 @@ from cce.render import PlaceholderUpstream, plan_scenario
 
 MINIMUM_GIT = (2, 31)
 MINIMUM_PYTHON = (3, 14)
+MINIMUM_COPILOT = (1, 0, 83)
 
 Runner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
 Which = Callable[[str], str | None]
@@ -71,7 +72,7 @@ def run_checks(environment: Environment, manifest: Manifest, *, offline: bool) -
     checks = [
         _python(environment),
         _git(environment),
-        _tool(environment, "copilot", missing=Status.WARN, hint="install GitHub Copilot CLI"),
+        _copilot(environment),
         _tool(
             environment,
             "claude",
@@ -116,6 +117,29 @@ def _git(environment: Environment) -> Check:
     return Check("git", Status.OK, completed.stdout.strip())
 
 
+def _copilot(environment: Environment) -> Check:
+    """Copilot CLI presence and version; the recorded scenario numbers assume 1.0.83."""
+    if environment.which("copilot") is None:
+        return Check("copilot", Status.WARN, "not found on PATH (install GitHub Copilot CLI)")
+    try:
+        completed = environment.run(["copilot", "--version"])
+    except (OSError, subprocess.SubprocessError) as error:
+        return Check("copilot", Status.WARN, f"copilot --version failed: {error}")
+    match = re.search(r"(\d+)\.(\d+)\.(\d+)", completed.stdout + completed.stderr)
+    if completed.returncode != 0 or match is None:
+        return Check("copilot", Status.WARN, "copilot --version did not report a version")
+    found = tuple(int(part) for part in match.groups())
+    version = ".".join(match.groups())
+    if found < MINIMUM_COPILOT:
+        wanted = ".".join(str(part) for part in MINIMUM_COPILOT)
+        return Check(
+            "copilot",
+            Status.WARN,
+            f"{version} found; the guides were measured on {wanted} or newer",
+        )
+    return Check("copilot", Status.OK, f"{version} at {environment.which('copilot')}")
+
+
 def _tool(environment: Environment, name: str, *, missing: Status, hint: str) -> Check:
     location = environment.which(name)
     if location is None:
@@ -145,7 +169,9 @@ def _personal_customisation(environment: Environment) -> Check:
     return Check(
         "personal",
         Status.WARN,
-        "may skew scenario results: " + ", ".join("~/" + item for item in found),
+        "may skew scenario results: "
+        + ", ".join("~/" + item for item in found)
+        + " (docs/presenting.md explains how to isolate them)",
     )
 
 
