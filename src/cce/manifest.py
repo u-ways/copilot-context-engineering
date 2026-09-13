@@ -15,6 +15,9 @@ from typing import Any
 from cce import CceError
 
 MANIFEST_RESOURCE = "overlays/scenarios.toml"
+PACKAGED_GUIDES = Path(__file__).resolve().parent / "guides"
+DOCS_FALLBACK = Path(__file__).resolve().parents[2] / "docs"
+PRESENTING = "presenting"
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _ID_RE = re.compile(r"^\d{2}$")
 _SLUG_RE = re.compile(r"^\d{2}-[a-z][a-z0-9-]*$")
@@ -331,3 +334,19 @@ def _string(value: object, name: str) -> str:
     if not isinstance(value, str) or not value:
         raise ManifestError(f"manifest field {name!r} must be a non-empty string")
     return value
+
+
+def guides_root(packaged: Path = PACKAGED_GUIDES, fallback: Path = DOCS_FALLBACK) -> Path:
+    """Where guides live: the wheel's ``cce/guides`` or, in an editable install, ``docs/``."""
+    return packaged if packaged.is_dir() else fallback
+
+
+def guide_path(manifest: Manifest, token: str, root: Path | None = None) -> Path:
+    """The Markdown file for ``presenting`` or a scenario id (any accepted form)."""
+    base = root if root is not None else guides_root()
+    packaged = base.name == "guides"
+    if token == PRESENTING:
+        return base / "presenting.md"
+    scenario = resolve_ids(manifest, [token])[0]
+    directory = base if packaged else base / "scenarios"
+    return directory / f"{scenario.slug}.md"
