@@ -4,7 +4,7 @@
 
 The eight procedures that scenario 02 inlined into its instructions are packaged here as Agent Skills under `.github/skills/<name>/SKILL.md`, one per procedure, derived from the same sources. The instructions shrink to a few lines saying that the procedures exist as skills and to consult one only when the task matches its description.
 
-Copilot reads only each skill's front matter (name and description) at start-up. A body enters the context only when a task matches its description. Every procedure ends with a tracer line, `procedure: <name>`, so a load is visible in the reply as well as in `/skills`.
+Copilot reads only each skill's front matter (name and description) at start-up. A body enters the context only when a task matches its description. Every procedure ends with a tracer line, `procedure: <name>`, so a load is usually visible in the reply as well as in `/skills`; if a model omits the line, `/skills` is still the proof.
 
 Two prompts: a lookup that matches nothing, and a page-conversion task that matches exactly one skill.
 

@@ -44,7 +44,7 @@ The rotation, for the three skills that matter here:
 | `seqf-procedure-7` | procedure 8 (conversion) | procedure 7 (publishing) |
 | `seqf-procedure-8` | procedure 1 (maturity review) | procedure 8 (conversion) |
 
-Re-derive the whole table, one line per skill (description first, then the body's tracer):
+Re-derive the whole table, one line per skill (description first, then the body's tracer; a model may omit the tracer in its reply or remark that description and body disagree, and `/skills` remains the proof):
 
 ```sh
 for n in 1 2 3 4 5 6 7 8; do
