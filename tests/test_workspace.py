@@ -235,6 +235,45 @@ class TestListAndPath:
         assert code == 3 and out == "" and "cce setup 03" in err
 
 
+class TestBaselineRef:
+    def test_status_follows_the_baseline_ref_not_the_state_file(self, play: Playground) -> None:
+        play.setup("2")
+        state_path = play.root / "state.json"
+        state = State.load(state_path)
+        state.scenarios["02-instructions-context-cost"].baseline = "0" * 40
+        state.save(state_path)
+
+        _, out, _ = play.run("list")
+
+        assert "02-instructions-context-cost  ready" in out
+
+    def test_reset_uses_the_baseline_ref(self, play: Playground) -> None:
+        play.setup("2")
+        worktree = play.scenario("02-instructions-context-cost")
+        run_git(
+            worktree,
+            [
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@x",
+                "commit",
+                "-q",
+                "--allow-empty",
+                "-m",
+                "drift",
+            ],
+        )
+        ref_sha = play.base_git(
+            "rev-parse", "refs/cce/baseline/02-instructions-context-cost"
+        ).strip()
+
+        code, _, _ = play.run("reset", "2")
+
+        assert code == 0
+        assert run_git(worktree, ["rev-parse", "HEAD"]).strip() == ref_sha
+
+
 class TestReset:
     def test_reset_restores_tracked_and_untracked_changes(self, play: Playground) -> None:
         play.setup("1")

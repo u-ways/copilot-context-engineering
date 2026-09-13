@@ -228,9 +228,8 @@ class Workspace:
             return Inspection(
                 scenario, Status.MISSING, "directory exists but is unregistered", path
             )
-        if not self.base.is_dir() or not self.git.succeeds(
-            ["rev-parse", "--verify", "-q", f"{BASELINE_REF_PREFIX}{scenario.slug}"], cwd=self.base
-        ):
+        baseline = self.baseline_sha(scenario)
+        if baseline is None:
             return Inspection(
                 scenario, Status.MISSING, "baseline ref is absent", path, record.dialect
             )
@@ -241,13 +240,26 @@ class Workspace:
                 scenario, Status.MISSING, "worktree is unreadable", path, record.dialect
             )
         changed = [line[3:] for line in porcelain.stdout.split("\n") if line]
-        if head.stdout.strip() == record.baseline and not changed:
+        if head.stdout.strip() == baseline and not changed:
             return Inspection(scenario, Status.READY, "at baseline", path, record.dialect)
         if changed:
             detail = "changed: " + ", ".join(changed[:5]) + (" ..." if len(changed) > 5 else "")
         else:
             detail = "HEAD moved from the baseline"
         return Inspection(scenario, Status.MODIFIED, detail, path, record.dialect)
+
+    def baseline_sha(self, scenario: Scenario) -> str | None:
+        """The commit ``refs/cce/baseline/<slug>`` points at, or ``None`` when absent."""
+        if not self.base.is_dir():
+            return None
+        resolved = self.git.run(
+            ["rev-parse", "--verify", "-q", f"{BASELINE_REF_PREFIX}{scenario.slug}"],
+            cwd=self.base,
+            check=False,
+        )
+        if resolved.returncode != 0:
+            return None
+        return resolved.stdout.strip()
 
     def inspect_all(self) -> list[Inspection]:
         """Every scenario's status plus overlay drift; never raises."""
@@ -377,8 +389,8 @@ class Workspace:
                     f"{scenario.slug} is {inspection.detail}; run `cce setup {scenario.id}`",
                     exit_code=3,
                 )
-            baseline = state.scenarios[scenario.slug].baseline
-            self.git.run(["reset", "-q", "--hard", baseline], cwd=inspection.path)
+            ref = f"{BASELINE_REF_PREFIX}{scenario.slug}"
+            self.git.run(["reset", "-q", "--hard", ref], cwd=inspection.path)
             self.git.run(["clean", "-fdxq"], cwd=inspection.path)
 
     def teardown(self, *, force: bool) -> Path | None:
