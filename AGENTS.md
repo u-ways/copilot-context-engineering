@@ -37,6 +37,7 @@ Binding rules for any coding agent, and any human, working in this repository.
 | `just run *ARGS` | Run `cce` from the working tree |
 | `just version` | Check that `pyproject.toml` and `__version__` agree |
 | `just smoke` | Install as a uv tool and exercise the CLI; grows as commands land |
+| `just slides` | Render the developer deck to `dist/slides.html` with Marp (needs `npx`) |
 | `just clean` | Remove build, cache and coverage artefacts |
 
 ## Layout
