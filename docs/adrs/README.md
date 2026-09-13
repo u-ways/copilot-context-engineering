@@ -17,7 +17,7 @@ This index file is not itself an ADR.
 | [ADR-0007](0007-release-and-update-check.md) | Release and update check | Accepted | 2026-09-13 |
 | [ADR-0008](0008-herdr-presenter-mode.md) | herdr presenter mode is opt-in | Accepted | 2026-09-13 |
 | [ADR-0009](0009-self-serve-guides.md) | Self-serve guides | Accepted | 2026-09-13 |
-| [ADR-0010](0010-llm-verification-tier.md) | LLM verification tier and the Claude dialect | Proposed | 2026-09-13 |
+| [ADR-0010](0010-llm-verification-tier.md) | LLM verification tier and the Claude dialect | Accepted | 2026-09-13 |
 
 Numbers are allocated per decision area and are never reused.
 

@@ -17,6 +17,15 @@ from tests.support.upstream import GitUpstream, SyntheticUpstream, build
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--runtime",
+        choices=("copilot", "claude"),
+        default=os.environ.get("CCE_LLM_RUNTIME", "copilot"),
+        help="Coding agent the llm tier drives (copilot or claude).",
+    )
+
+
 @pytest.fixture(autouse=True)
 def quiet_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[None]:
     """Keep every test hermetic: no update checks, no user config, no herdr."""

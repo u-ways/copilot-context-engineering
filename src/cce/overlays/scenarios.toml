@@ -12,11 +12,23 @@ slug = "01-instructions-timeless"
 title = "Instructions hold durable rules, not changing repo state"
 overlay = "01-instructions-timeless"
 
+[[scenario.checks]]
+name = "allowlist-damage"
+prompt = "Bring blueprints.md into line with the approved blueprints list in the repository instructions."
+files_changed = ["blueprints.md"]
+
 [[scenario]]
 id = "02"
 slug = "02-instructions-context-cost"
 title = "Task runbooks in instructions are paid on every request"
 overlay = "02-instructions-context-cost"
+
+[[scenario.checks]]
+name = "lookup"
+prompt = "In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it."
+contains = ["\\b28\\b", "insights/metrics\\.md"]
+skills_loaded = []
+files_changed_max = 0
 
 [[scenario]]
 id = "03"
@@ -25,12 +37,33 @@ title = "The same procedures as skills cost nothing until matched"
 overlay = "03-skills-on-demand"
 skills = {}
 
+[[scenario.checks]]
+name = "lookup"
+prompt = "In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it."
+contains = ["\\b28\\b", "insights/metrics\\.md"]
+skills_loaded = []
+files_changed_max = 0
+
+[[scenario.checks]]
+name = "conversion"
+prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
+contains = ["procedure: convert-page-to-framework-conventions"]
+skills_loaded = ["convert-page-to-framework-conventions"]
+files_changed_max = 0
+
 [[scenario]]
 id = "04"
 slug = "04-skills-description-routing"
 title = "Descriptions route skills"
 overlay = "04-skills-description-routing"
 skills = { rename = "seqf-procedure-{n}", rotate_descriptions = 1 }
+
+[[scenario.checks]]
+name = "conversion"
+prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
+contains = ["procedure: publish-and-open-source-a-repository"]
+skills_loaded = ["seqf-procedure-7"]
+files_changed_max = 0
 
 [[scenario]]
 id = "05"
@@ -44,6 +77,26 @@ files = [
     { src = "_shared/scripts/cce-check-links.py", dest = "scripts/cce-check-links.py", executable = true },
 ]
 
+[[scenario.checks]]
+name = "researcher"
+agent = "researcher"
+prompt = "This framework mandates 100% unit-test coverage before release. 1) Find the statement that sets this requirement and cite it as path:line; if the framework does not state it anywhere, say so in your first sentence and cite the strongest evidence against it. 2) Whatever you conclude, write your findings to NOTES-coverage.md at the repository root, one line per citation. Work only from files in this worktree."
+contains = ["practices/testing\\.md"]
+files_changed_max = 0
+
+[[scenario.checks]]
+name = "author"
+agent = "author"
+prompt = "This framework mandates 100% unit-test coverage before release. 1) Find the statement that sets this requirement and cite it as path:line; if the framework does not state it anywhere, say so in your first sentence and cite the strongest evidence against it. 2) Whatever you conclude, write your findings to NOTES-coverage.md at the repository root, one line per citation. Work only from files in this worktree."
+files_changed = ["NOTES-coverage.md"]
+
+[[scenario.checks]]
+name = "validator"
+agent = "validator"
+prompt = "Run the repository's Markdown link validator (scripts/cce-check-links.py) and report its findings; fix nothing."
+contains = ["SECURITY\\.md:23", "RESULT: FAIL"]
+files_changed_max = 0
+
 [[scenario]]
 id = "06"
 slug = "06-agent-context-isolation"
@@ -51,3 +104,29 @@ title = "Delegate when you need the result, not the investigation"
 overlay = "06-agent-context-isolation"
 agents = ["auditor"]
 tabs = [{ label = "copilot:auditor", command = "copilot --agent auditor" }]
+
+[[scenario.checks]]
+name = "delegated"
+prompt = "How many level-2 Markdown headings (lines starting with \"## \") are there across the Markdown files in this repository, excluding the .github directory? Use the auditor agent and give me only the number and its scope."
+contains = ["\\b218\\b"]
+files_changed_max = 0
+
+[[scenario.checks]]
+name = "direct"
+agent = "auditor"
+prompt = "How many level-2 Markdown headings (lines starting with \"## \") are there across the Markdown files in this repository, excluding the .github directory? Use the auditor agent and give me only the number and its scope."
+contains = ["\\b218\\b"]
+files_changed_max = 0
+
+# Cross-run assertions for the LLM tier: left must exceed ratio x right.
+[[compare]]
+metric = "input_tokens"
+left = "02/lookup"
+right = "03/lookup"
+ratio = 1.5
+
+[[compare]]
+metric = "input_tokens"
+left = "06/direct"
+right = "06/delegated"
+ratio = 1.0

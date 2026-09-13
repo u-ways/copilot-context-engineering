@@ -1,7 +1,8 @@
 # ADR-0010: LLM verification tier and the Claude dialect
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-13: accepted when the tier landed (`tests/llm/`, `just llm`, `llm-tests.yml`, `[[scenario.checks]]` and `[[compare]]` in the manifest).
 
 ## Context
 
