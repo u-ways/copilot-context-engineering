@@ -172,7 +172,7 @@ def _personal_customisation(environment: Environment) -> Check:
         Status.WARN,
         "global instructions may skew scenario results: "
         + ", ".join(f"{label}/{item}" for item in found)
-        + " (docs/PREREQUISITES.md explains how to isolate them)",
+        + " (use --verbose to see the full list)",
         tuple(_listing(root, found)),
     )
 

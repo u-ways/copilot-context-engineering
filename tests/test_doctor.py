@@ -250,7 +250,7 @@ class TestPersonalCustomisation:
             "~/.copilot/copilot-instructions.md, ~/.copilot/skills, ~/.copilot/hooks"
             in check.detail
         )
-        assert "docs/PREREQUISITES.md" in check.detail
+        assert "use --verbose to see the full list" in check.detail
         assert check.details == (
             "copilot-instructions.md",
             "skills/mine/SKILL.md",

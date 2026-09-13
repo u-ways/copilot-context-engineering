@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
-- Revision 2026-09-13: `doctor` is for the person running the scenarios, not for developers or presenters. The `claude` and `herdr` rows are gone (`cce setup --herdr` runs its own preflight, ADR-0008; the Claude dialect is a test-tier concern, ADR-0010); the `personal` row covers only Copilot's own home (`$COPILOT_HOME`, else `~/.copilot`) and points at `docs/PREREQUISITES.md`; `--verbose` lists every file behind a warn row and `--json` carries the same list as `details`.
+- Revision 2026-09-13: `doctor` is for the person running the scenarios, not for developers or presenters. The `claude` and `herdr` rows are gone (`cce setup --herdr` runs its own preflight, ADR-0008; the Claude dialect is a test-tier concern, ADR-0010); the `personal` row covers only Copilot's own home (`$COPILOT_HOME`, else `~/.copilot`) and tells the user that `--verbose` shows the full list; `--verbose` lists every file behind a warn row and `--json` carries the same list as `details`.
 - Revision 2026-09-13: the exit-code table lives in `CONTRIBUTING.md`; `README.md` is a brief front page (ADR-0009).
 - Revision 2026-09-13: `doctor` probes never raise: a crash or timeout becomes a `fail`/`warn` row (the upstream row names `--offline`).
 - Revision 2026-09-13: `cce --version`/`-V` prints the version eagerly; `list` and `setup` rows are column-aligned and carry the dialect; `doctor` colours its status token on a colour terminal (`NO_COLOR` disables it), probes `copilot --version` against the measured minimum 1.0.83, and reports an `overlays` render check; exit-3 messages name the exact remedy (`cce setup N` or `cce setup N --force`); `reset` refuses without a workspace before creating anything.

@@ -50,7 +50,7 @@ ok    python        3.14.7
 ok    git           git version 2.53.0
 ok    copilot       1.0.83 at ~/.local/bin/copilot
 ok    uv            ~/.local/bin/uv
-warn  personal      global instructions may skew scenario results: ~/.copilot/skills, ~/.copilot/hooks (docs/PREREQUISITES.md explains how to isolate them)
+warn  personal      global instructions may skew scenario results: ~/.copilot/skills, ~/.copilot/hooks (use --verbose to see the full list)
 ok    overlays      6 scenarios render (37 files)
 ok    upstream      https://github.com/u-ways/software-engineering-quality-framework reachable (the pinned commit is verified by setup)
 ```
