@@ -90,7 +90,7 @@ Presenter mode is opt-in via `cce setup --herdr`, which lays out one herdr works
 
 Decisions live in [docs/adrs/](docs/adrs/); ADRs win over every other document, this README included. Releases are described in [docs/RELEASING.md](docs/RELEASING.md).
 
-A developer-facing slide deck lives in [docs/slides.md](docs/slides.md) (Marp; render with `npx @marp-team/marp-cli docs/slides.md -o slides.html`).
+A developer-facing slide deck lives in [docs/slides.md](docs/slides.md) (Marp; render with `just slides`).
 
 ## Licence
 
