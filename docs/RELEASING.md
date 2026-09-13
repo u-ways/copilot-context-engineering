@@ -71,7 +71,7 @@ sequenceDiagram
     Release->>GitHub: Confirm release vX.Y.Z is published
     User->>GitHub: cce update (releases/latest)
     GitHub-->>User: tag_name vX.Y.Z
-    User->>User: uv tool upgrade copilot-context-engineering
+    User->>User: uv tool install --force "copilot-context-engineering @ git+...@vX.Y.Z"
 ```
 
 ## User update experience
@@ -84,11 +84,11 @@ uv tool install "copilot-context-engineering @ git+https://github.com/u-ways/cop
 
 After a successful command (except `version`, `update` and `--help`), `cce` checks for a newer release at most once a day. It fetches the repository's `releases/latest` endpoint on the GitHub API with a short timeout and compares the release `tag_name` with `cce.__version__`.
 
-- On a TTY, a newer release triggers a `Y/n` prompt; answering yes runs `uv tool upgrade copilot-context-engineering`.
+- On a TTY, a newer release triggers a `Y/n` prompt; answering yes installs exactly the announced tag with `uv tool install --force "copilot-context-engineering @ git+https://github.com/u-ways/copilot-context-engineering@vX.Y.Z"`. `cce update` runs the same command.
 - Without a TTY, a one-line notice is printed to stderr and nothing else happens.
 - The check never fails a command: network errors, malformed responses, a missing release and an unwritable cache are all swallowed at debug level and the exit code is unchanged.
 
-A `git+https` install without a ref tracks `main`, so an upgrade may land a commit at or after the announced tag rather than exactly the tag. To install exactly one release:
+A `git+https` install without a ref tracks `main` until the first `cce update`, which pins the tool to the release it installs; later releases move the pin on. `uv tool upgrade` is not used because it does nothing for a pinned install and would move an unpinned one to the head of `main`. To install a specific release by hand:
 
 ```sh
 uv tool install --force "copilot-context-engineering @ git+https://github.com/u-ways/copilot-context-engineering@vX.Y.Z"
