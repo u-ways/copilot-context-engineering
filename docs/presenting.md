@@ -10,7 +10,7 @@ Do these before the talk, not on stage:
 - `cce setup` has run and `cce list` shows every scenario as `ready`.
 - Copilot CLI is logged in (`copilot` starts without a login prompt) and is version 1.0.83 or later.
 - Terminal font and size: `/context` and `/skills` output should be readable from the back of the room. Test at the projector's resolution.
-- Have `cce guide N` open in a second pane for each scenario, or use presenter mode below.
+- Have `cce guide N` open in a second pane for each scenario, or use presenter mode below (`cce setup --herdr` inside herdr).
 
 ## Run of show
 
@@ -39,9 +39,9 @@ Reset even when the previous beat made no visible change: a prompt that "did not
 
 Within a beat, follow the observation protocol printed in each guide: `/context` before the prompt, the prompt, then `/context`, `/usage` and `/diff` or `git status --porcelain`. Say the turn-0 number out loud before sending the prompt so the audience can compare.
 
-## Presenter mode (next release)
+## Presenter mode
 
-`cce setup --herdr` lays out the talk in herdr. It lands in the next release; the layout it will create is described here so the talk can be prepared for it.
+`cce setup --herdr` lays out the talk in herdr.
 
 - Opt-in only. Nothing herdr-related happens without the flag, and the flag refuses to run unless `HERDR_ENV=1` is set exactly and `herdr` is on the path.
 - It creates a `DEMO` workspace (this page in one tab, `cce list` in another) plus one herdr workspace per scenario, each with tabs for the guide, the rendered overlay files and a `copilot` session in the worktree. Scenario 06 gets a second Copilot tab running `copilot --agent auditor` for run B.

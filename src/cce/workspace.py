@@ -27,6 +27,8 @@ from cce.log import get_logger
 from cce.manifest import Manifest, Scenario
 from cce.render import OVERLAYS_ROOT, PlannedFile, digest, plan_scenario
 
+HERDR_RECORD = "herdr.json"
+
 MARKER = ".cce-workspace"
 LOCK_FILE = ".cce.lock"
 STATE_FILE = "state.json"
@@ -260,6 +262,21 @@ class Workspace:
         if resolved.returncode != 0:
             return None
         return resolved.stdout.strip()
+
+    def overlay_files(self, scenario: Scenario) -> list[str]:
+        """Paths the baseline commit added on top of the pinned upstream tree."""
+        listing = self.git.run(
+            [
+                "diff-tree",
+                "--no-commit-id",
+                "--name-only",
+                "-r",
+                f"{BASELINE_REF_PREFIX}{scenario.slug}",
+            ],
+            cwd=self.base,
+            check=False,
+        )
+        return [line for line in listing.stdout.split("\n") if line]
 
     def inspect_all(self) -> list[Inspection]:
         """Every scenario's status plus overlay drift; never raises."""
