@@ -1,6 +1,10 @@
 """Shared fixtures for the offline test suite (ADR-0002)."""
 
-from collections.abc import Iterator
+import json
+import os
+import stat
+import sys
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -42,3 +46,32 @@ def upstream(tmp_path_factory: pytest.TempPathFactory) -> SyntheticUpstream:
 def reader(upstream: SyntheticUpstream) -> GitUpstream:
     """An upstream reader over the synthetic repository's head."""
     return GitUpstream(upstream.path, upstream.head)
+
+
+@pytest.fixture
+def shim_bin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Callable[[str, str], Path]:
+    """Install fake executables on PATH: ``shim_bin("uv", "fake_uv.py")``."""
+    bin_dir = tmp_path / "shim-bin"
+    bin_dir.mkdir(exist_ok=True)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
+
+    def install(name: str, fake: str) -> Path:
+        script = REPO_ROOT / "tests" / "fakes" / fake
+        shim = bin_dir / name
+        shim.write_text(f'#!/bin/sh\nexec {sys.executable} {script} "$@"\n', encoding="utf-8")
+        shim.chmod(shim.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        return shim
+
+    return install
+
+
+@pytest.fixture
+def release_file(tmp_path: Path) -> Callable[[str], str]:
+    """Write a releases/latest body for ``tag`` and return its file:// URL."""
+
+    def write(tag: str) -> str:
+        path = tmp_path / "latest.json"
+        path.write_text(json.dumps({"tag_name": tag}), encoding="utf-8")
+        return path.as_uri()
+
+    return write

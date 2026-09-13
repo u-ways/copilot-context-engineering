@@ -8,7 +8,9 @@ import functools
 import json
 import os
 import sys
+import time
 from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
@@ -18,15 +20,41 @@ import typer
 from cce import CceError, __version__
 from cce import doctor as doctor_checks
 from cce import manifest as manifest_module
+from cce import update as update_module
 from cce.dialect import Dialect
 from cce.log import LogFormat, configure, get_logger
 from cce.workspace import Status, Workspace
+
+
+def default_cache_dir(env: Mapping[str, str], home: Path) -> Path:
+    """``$XDG_CACHE_HOME/cce`` or ``~/.cache/cce``."""
+    if env.get("XDG_CACHE_HOME"):
+        return Path(env["XDG_CACHE_HOME"]).expanduser() / "cce"
+    return home / ".cache" / "cce"
+
+
+def after_command(*_args: object, **_options: object) -> None:
+    """Run the once-a-day release check after a successful command."""
+    if _INVOKED_COMMAND.get() in UPDATE_CHECK_EXEMPT:
+        return
+    update_module.maybe_notify(
+        env=os.environ,
+        cache_dir=default_cache_dir(os.environ, Path.home()),
+        now=time.time,
+        is_tty=lambda: sys.stdin.isatty() and sys.stderr.isatty(),
+        confirm=lambda question: typer.confirm(question, default=True, err=True),
+    )
+
+
+UPDATE_CHECK_EXEMPT = frozenset({"version", "update"})
+_INVOKED_COMMAND: ContextVar[str | None] = ContextVar("cce_invoked_command", default=None)
 
 app = typer.Typer(
     name="cce",
     help="Prepare a local playground for GitHub Copilot CLI customisation scenarios.",
     add_completion=False,
     no_args_is_help=True,
+    result_callback=after_command,
 )
 
 
@@ -85,6 +113,7 @@ def root(
     configure(verbosity=verbosity, fmt=log_format)
     resolved = workspace if workspace is not None else default_workspace(os.environ, Path.home())
     ctx.obj = Settings(workspace=resolved.expanduser(), verbosity=verbosity, log_format=log_format)
+    _INVOKED_COMMAND.set(ctx.invoked_subcommand)
     get_logger("cce").debug("start", argv=sys.argv[1:], workspace=str(ctx.obj.workspace))
 
 
@@ -246,6 +275,23 @@ def teardown(
         get_logger("cce").info("nothing to remove", workspace=str(workspace.root))
         return
     typer.echo(f"removed {removed}")
+
+
+@app.command()
+@guarded
+def update(
+    check: Annotated[
+        bool, typer.Option("--check", help="Only report whether a newer release exists.")
+    ] = False,
+) -> None:
+    """Upgrade cce to the latest GitHub release with uv."""
+    current, latest, upgraded = update_module.update(env=os.environ, check_only=check)
+    latest_text = latest.tag if latest is not None else "unknown"
+    typer.echo(f"cce {current} (latest release: {latest_text})")
+    if upgraded:
+        typer.echo(f"upgraded to {latest_text}")
+    elif latest is not None and not check and latest.tag.lstrip("v") == current:
+        typer.echo("up to date")
 
 
 def main() -> None:

@@ -98,3 +98,4 @@ uv tool install --force "copilot-context-engineering @ git+https://github.com/u-
 | `CI` | Disables the update check; set by CI systems | unset |
 | `CCE_WORKSPACE` | Workspace path override | `$XDG_DATA_HOME/cce`, falling back to `~/.local/share/cce` |
 | `CCE_LOG_FORMAT` | Log renderer on stderr: `console` or `json` | `console` |
+| `CCE_RELEASES_URL` | Endpoint consulted for the latest release (tests and forks) | the GitHub `releases/latest` API |
