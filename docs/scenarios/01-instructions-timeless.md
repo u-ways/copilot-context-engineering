@@ -110,6 +110,15 @@ Run 3 cost the most of the three: without the table in context the model spent i
 
 The lesson: instructions are the right home for rules that stay true. A snapshot of repository state is a fact with an expiry date, and once it expires the instructions become a tool for undoing progress. Keep such facts in the repository, where git keeps them current, and let the instructions say how to treat them.
 
+### Impact in numbers
+
+Rough figures from the measured runs (credits are session totals; percentages are rounded):
+
+- Damage: the stale allowlist reverted 3 of the table's 6 rows, half the table, in one prompt. The durable rules reverted none.
+- Cost of the fix: the durable run cost about 19% fewer credits than the stale one (5.46 against 6.71) while producing the right outcome, so the safer instructions were also the cheaper ones.
+- Cost of the wrong lever: switching loading off cost about 90% more than the stale run (12.78 against 6.71), because the model spent its turns hunting for the file, and it still applied the list.
+- Context: all three runs started within a few thousand tokens of each other (20k to 21k). The damage was decided by what the instructions said, not by how much they cost.
+
 ## Reset
 
 ```sh

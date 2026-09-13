@@ -117,6 +117,15 @@ The difference between runs 1 and 3 is the point. The researcher cannot write be
 
 `./STRUGGLE.sh` shows the alternative: `--deny-tool write --deny-tool shell` for the researcher, `--deny-tool shell --deny-tool web` for the author, `--deny-tool write --allow-tool 'shell(python3:*)'` for the validator. Those flags are per-session and deny always beats allow, so switching role means quitting and restarting Copilot. An agent file carries the allowlist with the role: `--agent <name>` starts a session in it, and `/agent <name>` switches role inside one session.
 
+### Impact in numbers
+
+Rough figures from the measured runs (percentages are rounded):
+
+- Context at turn 0: an agent session starts about 70% smaller than a plain session (6k to 8k against 20k), because it carries only its own tool set.
+- Cost of the outcome: the researcher and the author cost within about 8% of each other (11.25 against 12.19) for the same investigation. The tool list, not the price, decided whether a file appeared.
+- Enforcement: 0 files written in 1 of 1 researcher runs, 1 file written in 1 of 1 author runs. A rule in the prompt ("write your findings") lost to the tool list every time; a rule in the agent file ("fix nothing") held only because the model chose to keep it.
+- The validator run cost about 64% less than either investigation (4.03 against 11.25), since running one script needs far less reading than refuting a claim.
+
 ## Reset
 
 ```sh

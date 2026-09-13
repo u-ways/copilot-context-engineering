@@ -93,6 +93,15 @@ Measured on Claude Sonnet 5:
 
 The lesson: instructions are for rules that apply to every request. A task runbook applies to one kind of task, and putting it in instructions charges every unrelated request for it. Scenario 03 shows the alternative in full.
 
+### Impact in numbers
+
+Rough figures from the measured runs (percentages are rounded):
+
+- Credits: the lookup cost about 88% less without the runbooks in context (4.15 against 35.02), and about 87% less with them packaged as skills (4.38 against 35.02). Roughly one eighth of the price for the same answer.
+- Context at turn 0: about 83% smaller (20k against 118k). The inlined file alone was 106k tokens of system prompt, about 5 times the size of everything else in the session.
+- Input tokens sent: about 48% fewer for the one-turn lookup (81.2k against 156.5k). That gap widens with every turn, because the system prompt is resent each time: after ten turns the inlined session has paid for the file ten times.
+- Accuracy: the only wrong citation of the three came from the inlined run, which answered from its context instead of reading the file.
+
 ## Reset
 
 ```sh

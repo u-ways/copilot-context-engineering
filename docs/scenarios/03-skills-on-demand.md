@@ -103,6 +103,14 @@ Compare run A with scenario 02's run (a): the same eight procedures, and the loo
 
 The lesson: a skill costs its front matter until it is matched, then exactly its body, and only in the session that needed it. The same text in instructions (scenario 02) is paid by every request.
 
+### Impact in numbers
+
+Rough figures from the measured runs (percentages are rounded):
+
+- Unmatched task: the lookup cost about 87% less than the same lookup with every procedure inlined (4.38 against scenario 02's 35.02). Eight skills sat available for the price of their descriptions, about 1k tokens of system prompt.
+- Matched task: loading one skill added about 10k tokens to the context (21k to 32k, roughly 50% larger) and the session cost 14.9 credits. Even that run, which did real work with a procedure, cost about 57% less than scenario 02's trivial lookup with all eight inlined.
+- Scope of the cost: one body, in one session. The other seven procedures cost nothing, and a fresh session starts at 21k again.
+
 ## Reset
 
 ```sh

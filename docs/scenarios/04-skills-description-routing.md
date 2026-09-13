@@ -90,6 +90,15 @@ done
 
 The lesson: names carry no routing signal. The description is the only thing Copilot has when it decides whether to load a skill, so write it as the trigger condition and keep it truthful about what the body does. A good body behind an unrelated description never loads for the tasks it was written for; a wrong body behind the right description, as here, loads confidently and either answers the wrong question or makes the model pay to work around it.
 
+### Impact in numbers
+
+Rough figures from the measured run against scenario 03's run B, the same prompt with truthful descriptions (percentages are rounded):
+
+- Credits: about 2 times the price (30.7 against 14.9, roughly 106% more) for a plan of similar quality.
+- Input tokens sent: about 3.6 times as many (665.6k against 182.5k), spent on loading the wrong body and then rebuilding the conventions from the exemplar pages.
+- Context after the reply: about 59% larger (51k against 32k), and the extra is the wrong body plus the recovery reads, all of which every later turn carries.
+- Routing accuracy: 0 of 1. The description decided, the name and the body never got a vote.
+
 ## Reset
 
 ```sh

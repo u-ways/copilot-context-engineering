@@ -81,6 +81,15 @@ The non-interactive `just llm copilot` tier measures the same pair through `copi
 
 The lesson: use a custom agent when you need a result and not the trail that produced it. The investigation still costs what it costs, but it stays out of the context you keep working in. Run B is what happens when the same role is worn by the main session instead of dispatched.
 
+### Impact in numbers
+
+Rough figures from the measured runs (percentages are rounded):
+
+- Working context afterwards: about 82% smaller when delegated (21k against 114k), and the conversation itself about 99% smaller (467 tokens against 106.7k on the `Messages` line).
+- Cost: within about 8% either way (74.97 against 68.86 credits) and about the same input tokens (949k against 1.1m). Delegation saved nothing on the audit itself.
+- What you keep paying: every later turn in the direct session resends the 114k it accumulated, about 5 times what the delegated session resends. Ten follow-up questions cost roughly a million extra input tokens in run B and nothing extra in run A.
+- Same answer, 218, in 2 of 2 runs. The choice changes where the investigation lives, not whether it happens.
+
 ## Reset
 
 ```sh
