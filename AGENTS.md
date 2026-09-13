@@ -2,94 +2,32 @@
 
 Binding rules for any coding agent, and any human, working in this repository.
 
+This file holds only rules that stay true as the code changes. Anything that describes the current state of the repository (which recipes exist, which variables are read, which files live where) belongs to the place that defines it and is pointed to from here, never copied.
+
+## Where the truth lives
+
+- Decisions: `docs/adrs/README.md`. ADRs win over every other document, this one included. Read the index first, then the ADR an area cites before changing that area.
+- Commands: the `justfile`. Run `just` to list the recipes and what each does. CI runs the same recipes, so a workflow never calls `uv`, `pytest`, `ruff` or `mypy` directly.
+- Configuration: the code that reads an environment variable defines it. User-facing variables are documented in `docs/PREREQUISITES.md`, release and update ones in `docs/RELEASING.md`, the LLM tier's in ADR-0010.
+- Scenarios: `src/cce/overlays/scenarios.toml` is the manifest; every id, slug, check and comparison comes from it, and no Python branches on a scenario. One guide per scenario lives under `docs/scenarios/`, indexed by that directory's `README.md`.
+- The tool from the inside, its exit codes and the pull-request flow: `CONTRIBUTING.md`.
+
 ## Binding rules
 
-- Read `docs/adrs/README.md` first. ADRs win over every other document, this one included.
-- Every architecturally significant change lands in the same PR as the ADR that permits it: either a new ADR or a `- Revision YYYY-MM-DD:` bullet on an existing one.
-- Never copy text from the framework repository (`u-ways/software-engineering-quality-framework`, a fork of the NHS's `NHSDigital/software-engineering-quality-framework`) into this repo: no excerpts, fixtures or quotes. Cite `path:line` and paraphrase in our own words.
-- Never reference private or internal projects, companies or people.
-- No AI attribution in commits or PRs: no `Co-Authored-By` trailers, no "generated with" lines.
+- Every architecturally significant change lands in the same PR as the ADR that permits it: either a new ADR or a `- Revision YYYY-MM-DD:` bullet on an existing one. ADR-0001 defines "significant" mechanically.
 - Commit and PR titles are sentence-case imperative, usually `Area: summary`.
 - Branches are `feat/`, `fix/` or `docs/`; PRs are squash-merged; CI must be green before merge.
 - TDD: a behaviour change lands with its test, a bug fix with a regression test.
 - Tests use fakes (real scripts or injected callables), never mocks; they are class-grouped with behaviour-sentence names, fully typed, and their module docstrings cite the ADR under test.
 - `# noqa` and `# type: ignore` need a bracketed code and a reason.
 - Overlay files under `src/cce/overlays/` never use leading-dot path segments (`github/` renders as `.github/`).
-- stdout is for results; stderr is for logs.
+- stdout is for results; stderr is for logs. Only `cli.py` prints or exits; every other module raises `CceError` and returns values.
 
-## Commands
+## Finding your way
 
-`just` is the only command surface. CI calls these same recipes; never invoke `uv`, `pytest`, `ruff` or `mypy` directly in a workflow.
+The layout follows conventions rather than a list:
 
-| Recipe | Purpose |
-| --- | --- |
-| `just` | List recipes (default) |
-| `just install` | `uv sync --locked --all-groups` |
-| `just fmt` | Format the code with ruff |
-| `just lint` | Ruff lint and format check, no auto-fix |
-| `just typecheck` | mypy strict over `src`, `tests` and `scripts` |
-| `just test *ARGS` | Default (offline) test tier; extra arguments go to pytest |
-| `just cov` | Default tier with branch coverage, terminal and XML reports |
-| `just e2e *ARGS` | Opt-in e2e tier: real pinned clone into a temporary directory |
-| `just llm RUNTIME *ARGS` | Opt-in LLM tier against `copilot` or `claude` |
-| `just audit` | Export the locked requirements and run pip-audit |
-| `just check` | `lint`, `typecheck` and `cov` |
-| `just run *ARGS` | Run `cce` from the working tree |
-| `just version` | Check that `pyproject.toml` and `__version__` agree |
-| `just smoke` | Install as a uv tool and exercise the CLI; grows as commands land |
-| `just slides` | Render the developer deck to `dist/slides.html` with Marp (needs `npx`) |
-| `just clean` | Remove build, cache and coverage artefacts |
-
-## Environment
-
-| Variable | Effect |
-| --- | --- |
-| `CCE_WORKSPACE` | Workspace path override; default `$XDG_DATA_HOME/cce`, then `~/.local/share/cce` |
-| `CCE_LOG_FORMAT` | Log renderer on stderr: `console` (default) or `json` |
-| `CCE_UPDATE_INTERVAL` | Seconds between release checks; default `86400` |
-| `CCE_DISABLE_UPDATE_CHECK` | Any value switches the release check off; `CI` does the same |
-| `CCE_RELEASES_URL` | Endpoint consulted for the latest release (tests and forks) |
-| `CCE_LLM_RUNTIME` | Default runtime for `just llm` (the `--runtime` pytest option): `copilot` or `claude` |
-| `CCE_LLM_MODEL` | Passed to the runtime as `--model` |
-| `CCE_LLM_ISOLATE` | `1` runs Copilot under a scratch `COPILOT_HOME`; needs `COPILOT_GITHUB_TOKEN` |
-| `COPILOT_HOME` | Copilot's own setting; `cce doctor` checks it (else `~/.copilot`) for global customisation |
-
-## Layout
-
-```text
-.editorconfig  .gitignore  .python-version  AGENTS.md  CLAUDE.md  CONTRIBUTING.md  LICENSE  README.md
-justfile  pyproject.toml  uv.lock
-.github/
-    dependabot.yml                 uv and github-actions, weekly
-    adr-review/prompt.md           prompt for the ADR review workflow
-    workflows/                     ci, security, adr-review, dependabot-auto-merge,
-                                   release-drafter, release, e2e, llm-tests
-docs/
-    PREREQUISITES.md               requirements, install and first-run checks
-    RELEASING.md                   release and update process
-    adrs/                          index plus ADR-0001..0010; ADRs win over other docs
-    scenarios/                     README.md walkthrough index plus one guide per scenario
-                                   slug, all shipped as cce/guides
-    presenting.md                  presenter guide
-scripts/
-    s06_ground_truth.py            dev-only ground truth for scenario 06
-src/cce/
-    __init__.py                    __version__ and CceError
-    __main__.py                    python -m cce
-    cli.py                         Typer app; the only module that prints or exits
-    log.py                         structlog to stderr, console or json
-    manifest.py                    scenarios.toml loader, id parsing, front matter
-    doctor.py                      environment checks
-    render.py                      overlay directives to planned files
-    dialect.py                     Copilot to Claude Code layout translator
-    workspace.py                   pinned clone, worktrees, baselines, lock
-    update.py                      throttled release check and cce update
-    herdr.py                       opt-in presenter layout
-    overlays/                      scenarios.toml, _shared procedures, agents and
-                                   scripts, one directory per scenario
-tests/
-    conftest.py  support/  fakes/  fixtures, synthetic upstream, herdr and uv shims
-    test_*.py                      default tier, offline
-    e2e/                           real pinned clone, marker e2e
-    llm/                           opt-in LLM tier, marker llm
-```
+- `src/cce/` has one module per concern, named for it. `cli.py` is the command surface; `overlays/` holds the manifest, the shared procedures, agents and scripts under `_shared/`, and one directory per scenario.
+- `tests/` mirrors `src/cce/` module for module as `test_<module>.py`. `tests/e2e/` and `tests/llm/` are the opt-in tiers behind pytest markers; `tests/support/` and `tests/fakes/` hold the synthetic upstream and the shims.
+- `docs/` holds the ADRs, the guides and the user-facing pages; `.github/` holds the workflows and the ADR-review prompt.
+- When a file's purpose is unclear, its module docstring names the ADR it implements.
