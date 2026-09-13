@@ -42,8 +42,7 @@ cce teardown   # remove the workspace
 
 The workspace lives under the XDG data directory (default `~/.local/share/cce`) or wherever `CCE_WORKSPACE` points. Scenario ids accept `3`, `03`, `03-skills-on-demand` or `skills-on-demand`.
 
-> **Note**
-> These commands arrive over the next few releases; the first release ships the toolchain and `cce version` only. The decisions behind the roadmap are recorded in [docs/adrs/README.md](docs/adrs/README.md).
+The decisions behind every command are recorded in [docs/adrs/README.md](docs/adrs/README.md).
 
 ## Scenarios
 
@@ -56,7 +55,7 @@ The workspace lives under the XDG data directory (default `~/.local/share/cce`) 
 | 05 | agent-permissions | Permissions belong to the role | [05-agent-permissions.md](docs/scenarios/05-agent-permissions.md) |
 | 06 | agent-context-isolation | Delegate when you need the result, not the investigation | [06-agent-context-isolation.md](docs/scenarios/06-agent-context-isolation.md) |
 
-The guide files land in a later pull request, so the links above resolve only once that is merged.
+Read a guide without a checkout with `cce guide 3` (or `cce guide presenting`).
 
 ## How it works
 

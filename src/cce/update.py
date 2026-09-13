@@ -163,5 +163,6 @@ def _last_checked(cache: Path) -> float:
     try:
         value = json.loads(cache.read_text(encoding="utf-8")).get("checked_at", 0)
         return float(value)
-    except OSError, ValueError, AttributeError, TypeError:
+    except (OSError, ValueError, AttributeError, TypeError) as error:
+        log.debug("no usable update-check cache", error=str(error))
         return 0.0

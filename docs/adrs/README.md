@@ -15,9 +15,10 @@ This index file is not itself an ADR.
 | [ADR-0005](0005-overlays-and-rendering.md) | Overlays and rendering | Accepted | 2026-09-13 |
 | [ADR-0006](0006-cli-output-and-logging.md) | CLI output and logging | Accepted | 2026-09-13 |
 | [ADR-0007](0007-release-and-update-check.md) | Release and update check | Accepted | 2026-09-13 |
+| [ADR-0009](0009-self-serve-guides.md) | Self-serve guides | Accepted | 2026-09-13 |
 | [ADR-0010](0010-llm-verification-tier.md) | LLM verification tier and the Claude dialect | Proposed | 2026-09-13 |
 
-Numbers are allocated per decision area and are not consecutive in the index until the corresponding work lands: ADR-0008 and ADR-0009 arrive with the pull requests that implement the decisions they record. A number is never reused.
+Numbers are allocated per decision area and are not consecutive in the index until the corresponding work lands: ADR-0008 arrives with the pull requests that implement the decisions they record. A number is never reused.
 
 ## File naming
 

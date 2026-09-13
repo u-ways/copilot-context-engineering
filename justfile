@@ -73,6 +73,8 @@ smoke:
     cce --help
     cce version
     cce doctor --offline
+    cce guide 01 > /dev/null
+    cce guide presenting > /dev/null
     cce setup
     cce list
     cce reset all

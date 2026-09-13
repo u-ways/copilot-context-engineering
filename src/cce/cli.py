@@ -293,6 +293,20 @@ def update(
         typer.echo("up to date")
 
 
+@app.command()
+@guarded
+def guide(
+    scenario_id: Annotated[
+        str, typer.Argument(metavar="ID|presenting", help="Scenario id or 'presenting'.")
+    ],
+) -> None:
+    """Print a scenario guide (or the presenting guide) to stdout."""
+    path = manifest_module.guide_path(manifest_module.load(), scenario_id)
+    if not path.is_file():
+        raise CceError(f"guide not found: {path}", exit_code=2)
+    typer.echo(path.read_text(encoding="utf-8"), nl=False)
+
+
 def main() -> None:
     """Console-script entry point."""
     app()
