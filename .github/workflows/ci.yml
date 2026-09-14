@@ -72,3 +72,69 @@ jobs:
               env:
                   CCE_WORKSPACE: ${{ runner.temp }}/cce-smoke
               run: just smoke
+
+    # The LLM tier runs last, on pull requests only, and only when the diff touches what the
+    # agents actually see or how the tier runs them. A skipped job counts as passing for the
+    # required check, so unrelated pull requests are not held up or charged.
+    llm-changes:
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        outputs:
+            relevant: ${{ steps.diff.outputs.relevant }}
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+            - name: Detect changes the agents can see
+              id: diff
+              env:
+                  BASE: ${{ github.event.pull_request.base.sha }}
+              run: |
+                  changed="$(git diff --name-only "$BASE" HEAD)"
+                  pattern='^(src/cce/(overlays/|dialect\.py|render\.py|manifest\.py)|tests/llm/|tests/conftest\.py|\.github/workflows/ci\.yml)'
+                  if printf '%s\n' "$changed" | grep -Eq "$pattern"; then
+                      echo "relevant=true" >> "$GITHUB_OUTPUT"
+                      echo "::notice::LLM tier will run; relevant files changed"
+                  else
+                      echo "relevant=false" >> "$GITHUB_OUTPUT"
+                      echo "::notice::LLM tier skipped; no overlay, manifest, dialect, renderer or tier change"
+                  fi
+
+    llm:
+        needs:
+            - quality
+            - test
+            - smoke
+            - llm-changes
+        if: needs.llm-changes.outputs.relevant == 'true'
+        runs-on: ubuntu-latest
+        timeout-minutes: 90
+        steps:
+            - name: Check out
+              uses: actions/checkout@v7
+            - name: Set up uv
+              uses: astral-sh/setup-uv@v7
+              with:
+                  enable-cache: true
+            - name: Set up just
+              uses: extractions/setup-just@v4
+            - name: Set up Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+            - name: Install Claude Code
+              run: npm install -g @anthropic-ai/claude-code@2.1.270
+            - name: Install
+              run: just install
+            - name: Run the LLM tier on Claude Code
+              env:
+                  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+              run: just llm claude
+            - name: Upload structural results
+              if: always()
+              uses: actions/upload-artifact@v7
+              with:
+                  name: llm-results
+                  path: .cce-artifacts/results/
+                  if-no-files-found: ignore
