@@ -25,7 +25,7 @@ LICENCE_GUARD_MIN_CHARS = 40
 
 
 class GroundTruth(Protocol):
-    def count_level_two_headings(self, root: Path) -> tuple[int, dict[str, int]]: ...
+    def pages_without_context(self, root: Path) -> tuple[int, dict[str, bool]]: ...
 
 
 def ground_truth() -> GroundTruth:
@@ -89,17 +89,17 @@ class TestPinnedClone:
 
         assert 300_000 <= included <= 450_000
 
-    def test_s01_instructions_point_at_the_removed_secret_scanning_tool(
+    def test_s01_instructions_embed_the_pre_hardening_actions_guidance(
         self, workspace: Path
     ) -> None:
-        text = (
-            scenario(workspace, "01-instructions-timeless") / ".github" / "copilot-instructions.md"
-        ).read_text()
-        current = (scenario(workspace, "01-instructions-timeless") / "blueprints.md").read_text()
+        worktree = scenario(workspace, "01-instructions-timeless")
+        text = (worktree / ".github" / "copilot-instructions.md").read_text()
+        current = (worktree / "practices" / "actions-best-practices.md").read_text()
 
-        assert "tools/nhsd-git-secrets/README.md" in text
-        assert "versioning-reference-template" not in text
-        assert "tools/gitleaks.md" in current
+        assert "actions/checkout@v3" in text
+        assert "cooldown" not in text
+        assert "cooldown:" in current
+        assert "actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332" in current
 
     def test_s05_validator_reports_exactly_the_known_finding(self, workspace: Path) -> None:
         worktree = scenario(workspace, "05-agent-permissions")
@@ -123,12 +123,12 @@ class TestPinnedClone:
         assert any(line.strip().startswith("SECURITY.md:23 ->") for line in lines)
         assert lines[-2] == "RESULT: FAIL"
 
-    def test_s06_ground_truth_is_218_level_two_headings(self, workspace: Path) -> None:
-        total, per_file = ground_truth().count_level_two_headings(
+    def test_s06_ground_truth_is_25_pages_without_a_context_section(self, workspace: Path) -> None:
+        missing, per_file = ground_truth().pages_without_context(
             scenario(workspace, "06-agent-context-isolation")
         )
 
-        assert total == 218
+        assert missing == 25
         assert len(per_file) == 48
 
     def test_no_upstream_prose_is_shipped(self, workspace: Path) -> None:

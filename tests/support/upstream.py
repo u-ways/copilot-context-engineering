@@ -1,10 +1,10 @@
 """A synthetic upstream repository with dated history, served over ``file://`` (ADR-0003).
 
 The repository contains only invented text. It carries a placeholder for every
-path the packaged overlays include, an older revision of ``blueprints.md`` so
-``asof=`` includes have something to find, an inert directive line to prove
-included text is never re-scanned, and an ignore rule for ``*.sh`` so overlay
-files must be added with ``--force``.
+path the packaged overlays include, an older revision of ``blueprints.md`` and
+of every dated include target so ``asof=`` includes have something to find, an
+inert directive line to prove included text is never re-scanned, and an ignore
+rule for ``*.sh`` so overlay files must be added with ``--force``.
 """
 
 import subprocess
@@ -37,9 +37,13 @@ def build(root: Path, targets: Iterable[IncludeTarget]) -> SyntheticUpstream:
     _git(root, "init", "-q", "-b", "main")
     _write(root / "README.md", "# Synthetic upstream\n\nInvented content for tests.\n")
     _write(root / "blueprints.md", f"| Topic |\n| --- |\n| {OLD_MARKER} |\n")
-    _commit(root, "Old blueprints table", "2020-01-01T00:00:00Z")
+    dated = sorted({target.path for target in targets if target.asof})
+    for path in dated:
+        _write(root / path, f"Old placeholder for {path}: {OLD_MARKER}\n")
+    _commit(root, "Old revisions of the dated include targets", "2020-01-01T00:00:00Z")
     for target in sorted(targets, key=lambda target: target.path):
-        _write(root / target.path, f"Placeholder for {target.path} (synthetic upstream)\n")
+        marker = f" {NEW_MARKER}" if target.path in dated else ""
+        _write(root / target.path, f"Placeholder for {target.path} (synthetic upstream){marker}\n")
     _write(root / "blueprints.md", f"| Topic |\n| --- |\n| {NEW_MARKER} |\n")
     _write(root / "inert.md", f"An included file keeps this literal line:\n{INERT_LINE}\n")
     (root / "latin1.md").write_bytes(b"caf\xe9 (not UTF-8)\n")

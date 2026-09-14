@@ -2,9 +2,17 @@
 
 ## What it shows
 
-This scenario's `.github/copilot-instructions.md` inlines all eight framework procedures, about 413 KB of upstream text rendered at setup time, under a header that declares every procedure required reading before any task. Copilot loads the file in full into the system prompt of every request.
+### The topic
 
-The prompt is a one-fact lookup in one file. None of the eight procedures helps with it, yet all of them sit in context on every turn. Scenario 03 ships the same procedures as skills and serves as the control, so this guide borrows one run from it.
+The framework's engineering principles. `principles.md` lists the seven lean-inspired principles the whole framework rests on, from eliminating waste to optimising the whole, each with a short explanation. It is the page a newcomer reads first, and a question about it needs nothing else.
+
+The framework also holds eight long task procedures (this repository packages them as "procedures"): how to review engineering maturity, set up a delivery pipeline, design a test strategy, make a service observable, record a cloud architecture decision, run security scanning, open-source a repository, and convert a page to the house conventions. Together they are about 413 KB of text.
+
+### The set-up
+
+This scenario's `.github/copilot-instructions.md` inlines all eight procedures under a header that declares them required reading before any task. Copilot loads the file in full into the system prompt of every request.
+
+The prompt is a one-fact lookup on the principles page. None of the eight procedures helps with it, yet all of them sit in context on every turn. Scenario 03 ships the same procedures as skills and serves as the control, so this guide borrows one run from it.
 
 ## Run it
 
@@ -21,10 +29,10 @@ Record what you see as you go:
 The prompt, identical in all three runs:
 
 ```text
-In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
+In principles.md, how many engineering principles does the framework list, and what is the first one? Reply with the number, the name and the path:line where you found it.
 ```
 
-Do not re-word it. In particular, do not add "table" or "format": those words appear in skill descriptions and would trigger a skill in run (c), spoiling the comparison.
+Do not re-word it. In particular, do not mention maturity, quality checks or reviews: those words appear in a skill description and would trigger a skill in run (c), spoiling the comparison.
 
 ### Run (a): scenario 02, instructions on
 
@@ -34,11 +42,13 @@ Do not re-word it. In particular, do not add "table" or "format": those words ap
    cce reset 2 && cd "$(cce path 2)" && copilot --allow-all --model claude-sonnet-5
    ```
 
+   If the model refuses to start because the context is oversized, restart with `copilot --context long_context`.
+
 2. **Check**: `/context` before typing. Expect the context to be nearly half full already, with the `System Prompt` line above 100k tokens: that is the instructions file. `/instructions` shows it enabled; `wc -c .github/copilot-instructions.md` in the shell shows why.
 
 3. **Send** the prompt.
 
-4. **Observe**: expect the answer 28. Watch whether a `Read metrics.md` line appears at all: with the file's text already in its context, the measured run answered without opening it and cited the wrong line. Then `/context` (the whole file is still there, and every later turn resends it) and `/usage` (`AI Credits`, `Tokens ↑`).
+4. **Observe**: the reply should say seven, "Eliminate waste", at `principles.md:17`. The measured run answered correctly, but first ran two searches over a file that was already sitting in its context. Then `/context` (the whole file is still there, and every later turn will resend it) and `/usage` (`AI Credits`, `Tokens ↑`).
 
 5. **Quit and reset**: `/exit`, then `cce reset 2`.
 
@@ -54,7 +64,7 @@ Do not re-word it. In particular, do not add "table" or "format": those words ap
 
 3. **Send** the same prompt.
 
-4. **Observe**: expect a `Read metrics.md` line, the same answer with the correct citation (`insights/metrics.md:24` and `:33`), and a fraction of run (a)'s credits in `/usage`.
+4. **Observe**: expect a `Read principles.md` line, the same answer and citation, and a fraction of run (a)'s credits in `/usage`.
 
 5. **Quit and reset**: `/exit`, then `cce reset 2`.
 
@@ -82,14 +92,13 @@ Measured on Claude Sonnet 5:
 
 | Run | `/context` turn 0 → after | `System Prompt` line | `/usage` Tokens ↑ | AI credits (≈ $) |
 | --- | --- | --- | --- | --- |
-| (a) S02, instructions on | 118k → 119k | 106.5k | 156.5k | 35.02 (≈ $0.35) |
-| (b) S02, loading switched off | 20k → 21k | 8.3k | 81.2k | 4.15 (≈ $0.04) |
-| (c) S03, procedures as skills | 21k → 22k | 9.1k | 84.4k | 4.38 (≈ $0.04) |
+| (a) S02, instructions on | 118k → 119k | 106.5k | 470.0k | 41.74 (≈ $0.42) |
+| (b) S02, loading switched off | 20k → 21k | 8.3k | 81.2k | 4.0 (≈ $0.04) |
+| (c) S03, procedures as skills | 21k → 31k | 9.1k | 106.4k | 7.88 (≈ $0.08) |
 
-- The answer is 28, at `insights/metrics.md:24` and `insights/metrics.md:33`. Re-derive: `grep -n '28 days' insights/metrics.md`. In run (a) the measured reply cited line 15, a number that does not exist in the file: it answered from the copy in its context instead of reading the file.
-- The distractor is "monthly" at `insights/metrics.md:12`, which is how often the figures are tracked, not the window they are calculated over. Re-derive: `grep -n -i monthly insights/metrics.md`. The prompt asks "how many days" for that reason.
+- The answer is seven principles, the first being "Eliminate waste" at `principles.md:17`. Re-derive: `grep -n '^### ' principles.md` prints the seven headings with their line numbers.
 - Re-derive the size difference: `wc -c .github/copilot-instructions.md` in scenario 02, then the same command in scenario 03.
-- Same answer, eight times the credits. In (a) every later turn pays the same again, because instructions are resent with each request.
+- Same answer, 10x the credits. In (a) every later turn pays the same again, because instructions are resent with each request.
 
 The lesson: instructions are for rules that apply to every request. A task runbook applies to one kind of task, and putting it in instructions charges every unrelated request for it. Scenario 03 shows the alternative in full.
 
@@ -97,10 +106,9 @@ The lesson: instructions are for rules that apply to every request. A task runbo
 
 Rough figures from the measured runs (percentages are rounded):
 
-- Credits: the lookup cost about 88% less without the runbooks in context (4.15 against 35.02), and about 87% less with them packaged as skills (4.38 against 35.02). Roughly one eighth of the price for the same answer.
-- Context at turn 0: about 83% smaller (20k against 118k). The inlined file alone was 106k tokens of system prompt, about 5 times the size of everything else in the session.
-- Input tokens sent: about 48% fewer for the one-turn lookup (81.2k against 156.5k). That gap widens with every turn, because the system prompt is resent each time: after ten turns the inlined session has paid for the file ten times.
-- Accuracy: the only wrong citation of the three came from the inlined run, which answered from its context instead of reading the file.
+- Credits: the lookup cost about 90% less without the runbooks in context (4.0 against 41.74), and about 81% less with them packaged as skills (7.88 against 41.74).
+- Context at turn 0: about 83% smaller (20k against 118k). The inlined file alone was 106.5k tokens of system prompt.
+- Input tokens sent: about 83% fewer for the one-turn lookup (81.2k against 470.0k). That gap widens with every turn, because the system prompt is resent each time: after ten turns the inlined session has paid for the file ten times.
 
 ## Reset
 

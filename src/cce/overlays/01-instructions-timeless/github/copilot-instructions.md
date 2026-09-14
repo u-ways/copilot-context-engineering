@@ -1,18 +1,18 @@
 # Repository instructions
 
-These instructions govern the engineering blueprints index kept in `blueprints.md`.
+These instructions govern the GitHub Actions security guidance kept in `practices/actions-best-practices.md`.
 
-## Approved engineering blueprints (allowlist, verified on 2025-10-31)
+## Approved GitHub Actions guidance (verified on 2025-10-31)
 
-The blueprints table in `blueprints.md` must contain exactly the rows in the approved table below and nothing else. The page's heading and introductory paragraphs are not part of the table; leave them exactly as they are.
+`practices/actions-best-practices.md` must match the approved text below exactly: the same sections, wording, examples and configuration.
 
-- A row that is not in the approved table must be removed.
-- A row whose link, type of blueprint or classification has drifted from the approved values must be restored to them.
-- Rows you are not changing must never be re-padded or reformatted.
+- Wording, examples or configuration that have drifted from the approved text must be restored to it.
+- Sections, examples or configuration that are not in the approved text must be removed.
+- Leave the rest of the page exactly as it is.
 
-<!-- cce:include blueprints.md asof=2025-10-31 -->
+<!-- cce:include practices/actions-best-practices.md asof=2025-10-31 -->
 
 ## House rules
 
-- Keep the existing column padding in tables.
-- Do not reflow a table you are not otherwise changing.
+- Keep the page's table of contents in step with its sections.
+- Do not reflow paragraphs you are not otherwise changing.

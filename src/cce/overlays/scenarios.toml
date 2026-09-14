@@ -13,12 +13,12 @@ title = "Instructions hold durable rules, not changing repo state"
 overlay = "01-instructions-timeless"
 
 # Two outcomes are valid: the model applies the stale allowlist (and damages
-# blueprints.md), or it notices the dead path and refuses. Either way it must
-# engage with blueprints.md and touch nothing else.
+# practices/actions-best-practices.md), or it notices the later hardening and refuses.
+# Either way it must engage with that page and touch nothing else.
 [[scenario.checks]]
-name = "allowlist-damage"
-prompt = "Bring blueprints.md into line with the approved blueprints list in the repository instructions."
-contains = ["(?i)blueprint"]
+name = "stale-guidance"
+prompt = "Bring practices/actions-best-practices.md into line with the approved GitHub Actions guidance in the repository instructions."
+contains = ["(?i)actions"]
 files_changed_max = 1
 
 [[scenario]]
@@ -29,8 +29,8 @@ overlay = "02-instructions-context-cost"
 
 [[scenario.checks]]
 name = "lookup"
-prompt = "In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it."
-contains = ["\\b28\\b", "insights/metrics\\.md"]
+prompt = "In principles.md, how many engineering principles does the framework list, and what is the first one? Reply with the number, the name and the path:line where you found it."
+contains = ["\\b7\\b", "(?i)eliminate waste", "principles\\.md"]
 skills_loaded = []
 files_changed_max = 0
 
@@ -43,16 +43,16 @@ skills = {}
 
 [[scenario.checks]]
 name = "lookup"
-prompt = "In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it."
-contains = ["\\b28\\b", "insights/metrics\\.md"]
+prompt = "In principles.md, how many engineering principles does the framework list, and what is the first one? Reply with the number, the name and the path:line where you found it."
+contains = ["\\b7\\b", "(?i)eliminate waste", "principles\\.md"]
 skills_loaded = []
 files_changed_max = 0
 
 [[scenario.checks]]
-name = "conversion"
-prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
-contains = ["(?i)\\bplan\\b"]
-skills_loaded = ["convert-page-to-framework-conventions"]
+name = "decision-record"
+prompt = "Draft an Any Decision Record (ADR) for choosing a managed database service instead of running the database ourselves. Output the ADR only; do not edit any files."
+contains = ["(?i)\\bdecision\\b"]
+skills_loaded = ["cloud-architecture-decision"]
 files_changed_max = 0
 
 [[scenario]]
@@ -65,10 +65,10 @@ skills = { rename = "seqf-procedure-{n}", rotate_descriptions = 1 }
 # The routing proof is skills_loaded. Some models then follow the mis-routed
 # body (and print its tracer line), others notice the mismatch; the prose varies.
 [[scenario.checks]]
-name = "conversion"
-prompt = "Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files."
-contains = ["(?i)\\bplan\\b"]
-skills_loaded = ["seqf-procedure-7"]
+name = "decision-record"
+prompt = "Draft an Any Decision Record (ADR) for choosing a managed database service instead of running the database ourselves. Output the ADR only; do not edit any files."
+contains = ["(?i)\\bdecision\\b"]
+skills_loaded = ["seqf-procedure-4"]
 files_changed_max = 0
 
 [[scenario]]
@@ -113,15 +113,15 @@ tabs = [{ label = "copilot:auditor", command = "copilot --agent auditor" }]
 
 [[scenario.checks]]
 name = "delegated"
-prompt = "How many level-2 Markdown headings (lines starting with \"## \") are there across the Markdown files in this repository, excluding the .github directory? Use the auditor agent and give me only the number and its scope."
-contains = ["\\b218\\b"]
+prompt = "How many Markdown pages in this repository are missing a \"## Context\" section? Exclude the .github directory. Use the auditor agent and give me only the number and its scope."
+contains = ["\\b25\\b"]
 files_changed_max = 0
 
 [[scenario.checks]]
 name = "direct"
 agent = "auditor"
-prompt = "How many level-2 Markdown headings (lines starting with \"## \") are there across the Markdown files in this repository, excluding the .github directory? Use the auditor agent and give me only the number and its scope."
-contains = ["\\b218\\b"]
+prompt = "How many Markdown pages in this repository are missing a \"## Context\" section? Exclude the .github directory. Use the auditor agent and give me only the number and its scope."
+contains = ["\\b25\\b"]
 files_changed_max = 0
 
 # Cross-run assertions for the LLM tier: left's metric must exceed ratio x right's.
