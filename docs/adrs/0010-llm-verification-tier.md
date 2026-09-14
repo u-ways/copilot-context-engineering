@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-13
+- Revision 2026-09-14: the tier is no longer scheduled or label-triggered. It runs as the last job of `ci.yml` on pull requests only, after `quality`, `test` and `smoke`, and only when the diff touches what the agents see or how the tier runs them (`src/cce/overlays/`, `dialect.py`, `render.py`, `manifest.py`, `tests/llm/`, `tests/conftest.py`, `ci.yml`); a `llm-changes` job decides, and a skipped `llm` job counts as passing for the required check. The auditor scope in scenario 06 excludes assistant configuration files (`.github/`, `.claude/`, a root `CLAUDE.md` or `AGENTS.md`), because the Claude dialect renders the instructions as `CLAUDE.md` and a weekly run counted it as a framework page.
 - Revision 2026-09-13: runners keep the partial transcript when an agent times out and fail loudly, with the agent's stderr, when it exits non-zero without output, so a failed launch is never graded as a wrong answer.
 - Revision 2026-09-13: accepted when the tier landed (`tests/llm/`, `just llm`, `llm-tests.yml`, `[[scenario.checks]]` and `[[compare]]` in the manifest).
 - Revision 2026-09-13: `RunResult` also carries `main_input_tokens` and `subagent_input_tokens` (Copilot from the usage file's `agentMetrics`; Claude from top-level versus subagent `assistant` events); scenario 06's `[[compare]]` entries assert on them, and a compare entry may set `right_metric` to compare two different metrics. The isolation bullet is corrected to match the code: `CLAUDE_CONFIG_DIR` whenever `CLAUDE_CODE_OAUTH_TOKEN` is set, `COPILOT_HOME` only when `COPILOT_GITHUB_TOKEN` is set and `CCE_LLM_ISOLATE=1`, both under `.cce-artifacts/transcripts/<runtime>/`.
@@ -16,8 +17,8 @@ Agent frameworks such as pydantic-ai were considered for the runners and rejecte
 
 ## Decision
 
-- The LLM tier is opt-in: tests carry the pytest marker `llm`, `addopts` excludes them with `-m "not e2e and not llm"`, and `just llm copilot|claude` is the only way to run them. `ci.yml` never runs them and never references the tier's environment.
-- A workflow `llm-tests.yml` runs the tier with the Claude runner on `workflow_dispatch`, a weekly cron and the pull-request label `llm-tests`. It is not a required check.
+- The LLM tier is opt-in: tests carry the pytest marker `llm`, `addopts` excludes them with `-m "not e2e and not llm"`, and `just llm copilot|claude` is the only way to run them. `ci.yml` runs them only in its final, path-gated `llm` job on pull requests, and no workflow references `COPILOT_HOME` or `CLAUDE_CONFIG_DIR`.
+- `ci.yml` ends with the tier: an `llm-changes` job inspects the pull request's diff and an `llm` job, needing `quality`, `test`, `smoke` and that verdict, runs `just llm claude` with `CLAUDE_CODE_OAUTH_TOKEN`. It never runs on a push to `main`, never on a pull request that leaves the agents' inputs alone, and is a required check whose skipped state passes.
 - `tests/llm/runners.py` defines `AgentRunner` with two implementations that both normalise to `RunResult(text, skills_loaded, tools_used, input_tokens, files_changed, transcript_path)`:
   - `CopilotRunner` spawns `copilot -p <prompt> --allow-all -C <worktree> -s --output-format json --usage-output-file <tmp>` plus optional `--agent`, `--model` and `--no-custom-instructions`; `skills_loaded` comes from `tool.execution_start` events whose `toolName` is `skill`; `input_tokens` is `lastCallInputTokens` from the usage file.
   - `ClaudeRunner` spawns `claude -p <prompt> --output-format stream-json --verbose --permission-mode bypassPermissions --setting-sources project` plus optional `--agent` and `--model`, inside a worktree set up with `--dialect claude`; `skills_loaded` comes from top-level `assistant` events' `tool_use` blocks named `Skill`, ignoring events that carry `parent_tool_use_id`; `input_tokens` is the last top-level assistant event's `message.usage` summed over `input_tokens`, `cache_creation_input_tokens` and `cache_read_input_tokens`, never `result.usage`, which aggregates subagent work.
@@ -30,7 +31,7 @@ Agent frameworks such as pydantic-ai were considered for the runners and rejecte
 
 ## Consequences
 
-- The default tier stays fast and offline; agent behaviour is verified on demand and on a schedule, not on every push.
+- The default tier stays fast and offline; agent behaviour is verified before a merge that could change it, and never on a push to `main` or on an unrelated pull request.
 - Both runtimes produce the same `RunResult`, so a scenario check is written once in the manifest and judged the same way under Copilot and Claude.
 - The token metric is the main thread's final call context, which is what the context-cost scenarios (S02, S06) claim to change; subagent usage is deliberately excluded from it and reported separately as `subagent_input_tokens`.
 - Transcript text, which may contain upstream prose, never leaves the runner's machine or the CI job.
@@ -40,7 +41,7 @@ Agent frameworks such as pydantic-ai were considered for the runners and rejecte
 
 - Flag any test that spawns `copilot` or `claude` (through `subprocess` or a runner) outside `tests/llm/` or without the `llm` marker.
 - Require `[tool.pytest.ini_options].addopts` in `pyproject.toml` to contain `not e2e and not llm`.
-- Flag `.github/workflows/ci.yml` referencing `just llm`, `-m llm`, `COPILOT_HOME` or `CLAUDE_CONFIG_DIR`.
+- Require the `llm` job in `.github/workflows/ci.yml` to need `quality`, `test`, `smoke` and `llm-changes`, to be conditional on the `llm-changes` verdict, and to run only on `pull_request` events; flag `just llm` or `-m llm` anywhere else in the workflows, and `COPILOT_HOME` or `CLAUDE_CONFIG_DIR` in any workflow.
 - Flag `pydantic`, `pydantic-ai`, `anthropic`, `openai`, `google-genai` or `langchain` in `pyproject.toml`.
 - Flag any `copilot` flag in `tests/llm/` outside `-p`, `--allow-all`, `-C`, `--agent`, `--model`, `--no-custom-instructions`, `-s`, `--output-format`, `--usage-output-file` and `--context`, and any `claude` flag outside `-p`, `--output-format`, `--verbose`, `--permission-mode`, `--setting-sources`, `--agent` and `--model`, when this ADR carries no `- Revision` bullet naming the flag.
 - Require `.gitignore` to contain `.cce-artifacts/`.

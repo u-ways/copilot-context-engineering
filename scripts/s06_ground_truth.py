@@ -6,7 +6,8 @@ Usage::
 
 ROOT defaults to the current directory. The script walks every ``*.md`` file under
 ROOT (sorted, recursive), skipping any path that has a component named ``.git``,
-``.github`` or ``.claude``, and counts the files that have no line reading exactly
+``.github`` or ``.claude`` and the assistant configuration files ``CLAUDE.md`` and
+``AGENTS.md`` at the root, and counts the files that have no line reading exactly
 ``## Context`` (at column 0, outside a fenced code block). It prints that
 number followed by one sentence describing the scope, and nothing else. Standard
 library only.
@@ -16,12 +17,15 @@ import sys
 from pathlib import Path
 
 EXCLUDED_DIRS = frozenset({".git", ".github", ".claude"})
+EXCLUDED_ROOT_FILES = frozenset({"CLAUDE.md", "AGENTS.md"})
 FENCE_MARKERS = ("```", "~~~")
 SECTION_LINE = "## Context"
 
 
 def is_excluded(relative: Path) -> bool:
-    """True when any component of the path is one of the excluded directory names."""
+    """True for excluded directories and for assistant configuration files at the root."""
+    if len(relative.parts) == 1 and relative.name in EXCLUDED_ROOT_FILES:
+        return True
     return any(part in EXCLUDED_DIRS for part in relative.parts)
 
 
@@ -64,7 +68,8 @@ def pages_without_context(root: Path) -> tuple[int, dict[str, bool]]:
 def scope_sentence(root: str, examined: int) -> str:
     """The one-line description of what was audited, naming ``root`` as given."""
     return (
-        f"Scope: {examined} *.md files under {root} excluding .git, .github and .claude, "
+        f"Scope: {examined} *.md files under {root} excluding .git, .github, .claude "
+        "and a root CLAUDE.md or AGENTS.md, "
         "counting files with no '## Context' line at column 0 outside fenced code blocks."
     )
 

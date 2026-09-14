@@ -15,7 +15,10 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "s06_ground_truth.py"
-SCOPE_TAIL = "counting files with no '## Context' line at column 0 outside fenced code blocks."
+SCOPE_TAIL = (
+    "and a root CLAUDE.md or AGENTS.md, "
+    "counting files with no '## Context' line at column 0 outside fenced code blocks."
+)
 
 
 class GroundTruth(Protocol):
@@ -161,6 +164,19 @@ class TestExclusions:
         assert missing == 1
         assert list(per_file) == ["kept.md"]
 
+    def test_skips_assistant_configuration_files_at_the_root_only(
+        self, tmp_path: Path, ground_truth: GroundTruth
+    ) -> None:
+        write(tmp_path, "CLAUDE.md", "# Instructions\n")
+        write(tmp_path, "AGENTS.md", "# Rules\n")
+        write(tmp_path, "docs/CLAUDE.md", "# A page that happens to share the name\n")
+        write(tmp_path, "page.md", "## Context\n")
+
+        missing, per_file = ground_truth.pages_without_context(tmp_path)
+
+        assert missing == 1
+        assert list(per_file) == ["docs/CLAUDE.md", "page.md"]
+
     def test_skips_excluded_names_at_any_depth(
         self, tmp_path: Path, ground_truth: GroundTruth
     ) -> None:
@@ -217,8 +233,7 @@ class TestCommandLine:
         assert result.stderr == ""
         assert result.stdout.splitlines() == [
             "2",
-            f"Scope: 3 *.md files under {tmp_path} excluding .git, .github and .claude, "
-            + SCOPE_TAIL,
+            f"Scope: 3 *.md files under {tmp_path} excluding .git, .github, .claude " + SCOPE_TAIL,
         ]
 
     def test_defaults_to_the_current_directory(self, tmp_path: Path) -> None:
@@ -229,7 +244,7 @@ class TestCommandLine:
         assert result.returncode == 0
         assert result.stdout.splitlines() == [
             "1",
-            "Scope: 1 *.md files under . excluding .git, .github and .claude, " + SCOPE_TAIL,
+            "Scope: 1 *.md files under . excluding .git, .github, .claude " + SCOPE_TAIL,
         ]
 
     def test_main_is_importable_and_returns_zero(
