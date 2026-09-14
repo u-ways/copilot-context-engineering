@@ -18,7 +18,7 @@ overlay = "01-instructions-timeless"
 [[scenario.checks]]
 name = "stale-guidance"
 prompt = "Bring practices/actions-best-practices.md into line with the approved GitHub Actions guidance in the repository instructions."
-contains = ["(?i)actions"]
+contains = ["(?i)(actions|guidance|approved|pinn|cooldown|drift|instructions)"]
 files_changed_max = 1
 
 [[scenario]]
