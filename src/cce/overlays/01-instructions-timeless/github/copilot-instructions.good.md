@@ -1,16 +1,14 @@
 # Repository instructions
 
-These instructions govern the engineering blueprints index kept in `blueprints.md`.
+These instructions govern the GitHub Actions security guidance kept in `practices/actions-best-practices.md`.
 
-## Blueprints index
+## GitHub Actions guidance
 
-- `blueprints.md` is a short page: a heading, a few introductory paragraphs and exactly one Markdown table, with the columns Topic, Type of blueprint, Classification and Status, in that order. These rules concern the table only; never remove or rewrite anything outside it.
-- Topic is a link, either to a path that exists in this repository or to an https template repository.
-- The table is the source of truth for which blueprints exist. Never delete or rewrite a row to make the table agree with a list held in these instructions or in any other document. If asked to reconcile the table against such a list, report the differences and stop.
-- New rows go at the end of the table.
-- Never reorder or re-pad existing rows.
+- `practices/actions-best-practices.md` is the source of truth for how this organisation uses GitHub Actions. Its sections grow and its wording tightens over time; never rewrite it to match a copy held in these instructions or in any other document. If asked to reconcile the page against such a copy, report the differences and stop.
+- Every action in an example is pinned to a full commit SHA, with the release tag in a trailing comment. Never replace a SHA with a tag or a branch name.
+- Never weaken a requirement: a "must" stays a "must", and a security control that is present stays present.
+- New material goes into the existing section structure; keep the table of contents in step with the sections.
 
 ## House rules
 
-- Keep the existing column padding in tables.
-- Do not reflow a table you are not otherwise changing.
+- Do not reflow paragraphs you are not otherwise changing.

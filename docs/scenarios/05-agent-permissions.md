@@ -2,6 +2,12 @@
 
 ## What it shows
 
+### The topic
+
+Test coverage and quality gates. Every team has heard "we need 100% coverage"; the framework's testing guidance (`practices/testing.md`) says the opposite, that chasing the last percent is not worth the time, and its SonarQube guidance (`tools/sonarqube.md`) sets the real bar: a quality gate on new code at 80%. The prompt in this scenario asserts the myth and asks the agent to check it against those pages. The third run uses a small link checker shipped with the scenario, the kind of validation script every documentation repository ends up with.
+
+### The set-up
+
 Three custom agents under `.github/agents/` differ mainly in their `tools` list: `researcher` has `[read, search, web]`, `author` has `[read, search, edit]` and `validator` has `[read, search, execute]`. The same prompt goes to the first two and produces two different outcomes, decided by the tool list rather than by the wording of the request. A third run uses the validator, which can execute a script but is asked not to fix anything. `STRUGGLE.sh` prints what the same three roles would cost without agent files.
 
 The skills from scenario 03 are present but play no part here.

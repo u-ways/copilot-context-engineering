@@ -20,12 +20,12 @@ Order 01 to 06. The run counts below add up to thirteen live sessions (plus `./S
 
 | # | Scenario | Runs | The point |
 | --- | --- | --- | --- |
-| 01 | instructions-timeless | 3 | One prompt reverts three real upstream changes because the instructions froze a table in time; the durable rules leave the file alone. |
-| 02 | instructions-context-cost | 3 | A one-fact lookup costs about 100k input tokens with the procedures inlined, and a fraction of that without them. |
-| 03 | skills-on-demand | 2 | The same procedures as skills: the lookup loads nothing; the conversion prompt loads exactly one, and the tracer line proves it. |
-| 04 | skills-description-routing | 1 | Rotate the descriptions and the conversion prompt loads the publishing procedure; the names never mattered. |
+| 01 | instructions-timeless | 3 | One prompt un-pins every action and deletes the Dependabot cooldown because the instructions froze the Actions guidance in time; the durable rules leave the page alone. |
+| 02 | instructions-context-cost | 3 | A one-fact lookup on the principles page starts from a 118k context with the procedures inlined, and about 20k without them; ten times the credits for the same answer. |
+| 03 | skills-on-demand | 2 | The same procedures as skills: the lookup loads nothing; the ADR prompt loads exactly one, and the `● skill(...)` line and the tracer prove it. |
+| 04 | skills-description-routing | 1 | Rotate the descriptions and the ADR prompt loads the observability procedure; the names never mattered. |
 | 05 | agent-permissions | 3 (+ `./STRUGGLE.sh`) | Same prompt, two agents: the researcher cannot write the file, the author does; the validator reports and fixes nothing by convention. |
-| 06 | agent-context-isolation | 2 | Delegated, the audit returns two lines and your context stays small; run directly, 48 file reads land in your session. |
+| 06 | agent-context-isolation | 2 | Delegated, the Context-section audit returns two lines and your context stays small; run directly, 48 file reads land in your session. |
 
 Scenario 02's run (c) is scenario 03's run A, done once and counted under 03.
 
@@ -65,11 +65,11 @@ Within a run, follow the numbered steps printed in each guide: `/context` before
 
 ## When a run goes wrong
 
-- The model pushes back on a prompt (scenario 01 is the usual place: it may refuse to restore a dead path). Answer as the guide says (`yes, apply the list`) or take the refusal as the lesson. A cautious model demonstrating that stale instructions are wrong is a fine outcome; say so and move on.
+- The model pushes back on a prompt (scenario 01 is the usual place: it may refuse to undo the SHA pinning). Answer as the guide says (`yes, apply the approved guidance`) or take the refusal as the lesson. A cautious model demonstrating that stale instructions are wrong is a fine outcome; say so and move on.
 - A personal skill or agent appears in `/skills` or gets loaded. Point at the `cce doctor` warning, note that everything under `~/.copilot` is global to the machine, and continue; the scenario's own skill still loads or does not load as expected.
 - Copilot refuses to start or compacts because the context is too large (scenarios 02 and 06 run B). Restart with `copilot --context long_context`, or in scenario 06 with `copilot --agent auditor --context long_context`.
-- A different number comes back (a coverage citation other than `practices/testing.md:144`, a heading count other than 218). Run the re-derivation one-liner from the guide live; the ground truth is in the worktree and takes seconds to show.
-- A skill loads that should not have, or the wrong one loads in scenario 03. Check the prompt was sent verbatim: the words "table" and "format" in particular trigger skills. Reset and resend.
+- A different number comes back (a coverage citation other than `practices/testing.md:144`, a page count other than 25). Run the re-derivation one-liner from the guide live; the ground truth is in the worktree and takes seconds to show.
+- A skill loads that should not have, or the wrong one loads in scenario 03. Check the prompt was sent verbatim: words from the skill descriptions (maturity, quality checks, pipeline, testing) trigger skills. Reset and resend.
 - The worktree is in a strange state. `cce reset N`, or `cce setup N --force` if the reset is refused.
 
 ## Fallbacks

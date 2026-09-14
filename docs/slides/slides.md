@@ -92,67 +92,70 @@ cce reset 3    # return scenario 03 to its committed baseline
 
 # 01 Instructions hold durable rules, not repository state
 
-What it shows: instructions are sent with every request and treated as true. This one embeds the blueprints table as it stood on 2025-10-31 and calls it the approved allowlist. Upstream has since added a row, removed one and retargeted a link.
+Topic: the framework's GitHub Actions security page. In March 2026 upstream made SHA pinning mandatory, replaced `@v3` tags with pinned SHAs and added a Dependabot `cooldown`.
+
+What it shows: instructions are sent with every request and treated as true. This one embeds that page as it stood on 2025-10-31 and calls it the approved text.
 
 Three runs, one prompt:
 
-1. Stale allowlist: `cce reset 1 && cd "$(cce path 1)" && copilot`
-2. No instructions: same, with `copilot --no-custom-instructions`
-3. Durable rules: `cp .github/copilot-instructions.good.md .github/copilot-instructions.md`, then `copilot`
+1. Stale guidance: `cce reset 1 && cd "$(cce path 1)" && copilot --allow-all --model claude-sonnet-5`
+2. Durable rules: `cp .github/copilot-instructions.good.md .github/copilot-instructions.md && git commit -qam "durable"`, then the same
+3. Loading switched off: the same with `--no-custom-instructions`
 
 ```text
-Bring blueprints.md into line with the approved blueprints list in the repository instructions.
+Bring practices/actions-best-practices.md into line with the approved GitHub Actions guidance in the repository instructions.
 ```
 
 ---
 
 # 01 What you see
 
-Run 1, the stale allowlist, on Copilot CLI 1.0.83:
+Measured on Claude Sonnet 5, Copilot CLI 1.0.83:
 
-- deletes the current versioning-template row (`blueprints.md:10`)
-- points the secret-scanning row (`blueprints.md:14`) back at `tools/nhsd-git-secrets/README.md`, a path that no longer exists
-- re-adds a withdrawn draft row
+| Run | `/context` | AI credits | Outcome |
+| --- | --- | --- | --- |
+| 1, stale guidance | 23k → 30k | 15.53 | page rewritten: five `@v3` tags back, cooldown gone, "must" softened |
+| 2, durable rules | 20k → 26k | 7.21 | differences reported, nothing changed |
+| 3, loading off | 20k → 34k | 16.38 | searched, read the file from disk, same damage |
 
-Claude Code 2.1.270 refused and explained the dead path instead. Either outcome teaches the lesson.
+Re-derive: `grep -c 'actions/checkout@v3' practices/actions-best-practices.md` (0 at the baseline) and `grep -c cooldown` (2).
 
-Run 2: nothing to compare against, `/diff` is empty. Run 3: the good file states structure and intent only (one table, these columns, links must resolve, append at the end); Copilot reports the differences and stops.
-
-Lesson: a snapshot of repository state is a fact with an expiry date. Keep facts in the repository; keep how to treat them in the instructions.
+Lesson: a snapshot of repository content is a fact with an expiry date. Keep the content in the repository; keep how to treat it in the instructions. Switching loading off is a cost lever, not a firewall.
 
 ---
 
 # 02 Task runbooks in instructions are paid on every request
 
-What it shows: `.github/copilot-instructions.md` inlines all eight framework procedures, about 404 KB, under a header saying to read them all before any task. The prompt is a one-fact lookup in one file; none of the procedures helps with it.
+Topic: `principles.md`, the framework's seven lean-inspired engineering principles, and its eight long task procedures (about 413 KB).
+
+What it shows: `.github/copilot-instructions.md` inlines all eight procedures under a header saying to read them all before any task. The prompt is a one-fact lookup on the principles page; none of the procedures helps with it.
 
 ```sh
-cce reset 2 && cd "$(cce path 2)" && copilot   # (a) instructions on
-cce reset 2 && cd "$(cce path 2)" && copilot --no-custom-instructions   # (b) off
-cce reset 3 && cd "$(cce path 3)" && copilot   # (c) same procedures as skills
+cce reset 2 && cd "$(cce path 2)" && copilot --allow-all --model claude-sonnet-5   # (a) instructions on
+cce reset 2 && cd "$(cce path 2)" && copilot --allow-all --model claude-sonnet-5 --no-custom-instructions   # (b) off
+cce reset 3 && cd "$(cce path 3)" && copilot --allow-all --model claude-sonnet-5   # (c) same procedures as skills
 ```
 
 ```text
-In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
+In principles.md, how many engineering principles does the framework list, and what is the first one? Reply with the number, the name and the path:line where you found it.
 ```
-
-Do not reword it: "table" or "format" would trigger a skill in scenario 03.
 
 ---
 
 # 02 What you see
 
-Same answer every time: 28, at `insights/metrics.md:24` and `:33` (the distractor is "monthly" at line 12).
+Same answer every time: seven, "Eliminate waste", `principles.md:17`.
 
-Final-call input tokens for the lookup, measured through `copilot -p` and `claude -p`:
+Measured on Claude Sonnet 5:
 
-| Runtime | Inlined as instructions (S02) | As skills, none loaded (S03) |
-| --- | --- | --- |
-| Copilot CLI 1.0.83 | 100,756 | 19,941 |
-| Claude Code 2.1.270 | 147,581 | 19,461 |
+| Run | `/context` at turn 0 | `System Prompt` | Tokens ↑ | AI credits |
+| --- | --- | --- | --- | --- |
+| (a) inlined as instructions | 118k | 106.5k | 470.0k | 41.74 |
+| (b) loading switched off | 20k | 8.3k | 81.2k | 4.00 |
+| (c) as skills, none loaded | 21k | 9.1k | 106.4k | 7.88 |
 
-- In (a) `/context` is nearly full before you type, and every later turn pays it again
-- In (c) `/skills` lists eight skills and none loads: no `procedure:` line in the reply
+- In (a) `/context` is nearly half full before you type, and every later turn pays it again
+- In (c) `/skills` lists eight skills and none loads: no `● skill(...)` line, no `procedure:` line
 
 Lesson: instructions are for rules that apply to every request. A runbook applies to one kind of task.
 
@@ -162,34 +165,30 @@ Lesson: instructions are for rules that apply to every request. A runbook applie
 
 # 03 The same procedures as skills cost nothing until matched
 
-What it shows: the eight procedures now live at `.github/skills/<name>/SKILL.md`, one each, derived from the same sources. The instructions shrink to a few lines. Every procedure ends with a tracer line, `procedure: <name>`, so a load is visible in the reply as well as in `/skills`.
+Topic: Any Decision Records, the framework's template for recording one architectural decision, and its guidance on managed cloud services versus self-run components.
 
-`cce reset 3 && cd "$(cce path 3)" && copilot`, then prompt A (the lookup from scenario 02):
+What it shows: the eight procedures now live at `.github/skills/<name>/SKILL.md`, one each, derived from the same sources. The instructions shrink to a few lines. A load shows as `● skill(<name>)` in the transcript, and every procedure ends with a tracer line, `procedure: <name>`.
 
-```text
-In insights/metrics.md, over how many days is each engineering metric calculated? Reply with the number and the path:line where you found it.
-```
-
-Run B, in a fresh session, a task that matches exactly one skill:
+Run A: the principles lookup from scenario 02, in a fresh session. Run B, in another fresh session, a task that matches exactly one skill:
 
 ```text
-Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
+Draft an Any Decision Record (ADR) for choosing a managed database service instead of running the database ourselves. Output the ADR only; do not edit any files.
 ```
 
 ---
 
 # 03 What you see
 
-Run A: 28 at `insights/metrics.md:24`; no skill loads; 19,941 input tokens on the final call (Claude Code: 19,461).
+Run A: seven principles, "Eliminate waste"; no skill loads; 7.88 credits against 41.74 with everything inlined.
 
-Run B:
+Run B (8.78 credits, `/context` 21k → 32k):
 
-- `/skills` shows `convert-page-to-framework-conventions` loaded and nothing else; `/context` grows by that one body, about 27 KB
-- the plan names the real defects: no H1, bare URLs on lines 5 and 9, unlabelled fences, trailing whitespace, a `## Context` link that must resolve to `../../../principles.md`
-- the reply ends with the tracer line:
+- `● skill(cloud-architecture-decision)` appears in the transcript, and nothing else loads
+- the ADR follows the framework's template: Context; Decision with Assumptions, Drivers, Options, Outcome and Rationale; Consequences; Compliance; Notes; Actions; Tags
+- it grounds the drivers in the framework's cloud-services guidance and ends with the tracer line:
 
 ```text
-procedure: convert-page-to-framework-conventions
+procedure: cloud-architecture-decision
 ```
 
 `git status --porcelain` is empty after both prompts. Lesson: a skill costs its front matter until matched, then exactly its body, only in the session that needed it.
@@ -200,19 +199,19 @@ procedure: convert-page-to-framework-conventions
 
 # 04 Descriptions route skills
 
-What it shows: scenario 03 with two mechanical changes made at setup. The skill directories are renamed `seqf-procedure-1` to `seqf-procedure-8`, and every description is shifted one place along the procedure order; the bodies are untouched. The conversion description now sits on `seqf-procedure-7`, whose body is the publishing procedure.
+What it shows: scenario 03 with two mechanical changes made at setup. The skill directories are renamed `seqf-procedure-1` to `seqf-procedure-8`, and every description is shifted one place along the procedure order; the bodies are untouched. The cloud-architecture description now sits on `seqf-procedure-4`, whose body is the observability procedure.
 
 ```sh
 cce reset 4 && cd "$(cce path 4)"
-head -3 .github/skills/seqf-procedure-7/SKILL.md
-grep -l 'procedure: convert-page-to-framework-conventions' .github/skills/*/SKILL.md
-copilot
+head -3 .github/skills/seqf-procedure-4/SKILL.md
+grep -l 'procedure: cloud-architecture-decision' .github/skills/*/SKILL.md
+copilot --allow-all --model claude-sonnet-5
 ```
 
-The prompt from scenario 03, unchanged:
+The ADR prompt from scenario 03, unchanged:
 
 ```text
-Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows this framework's page conventions. Output the plan only; do not edit any files.
+Draft an Any Decision Record (ADR) for choosing a managed database service instead of running the database ourselves. Output the ADR only; do not edit any files.
 ```
 
 ---
@@ -220,11 +219,9 @@ Prepare a conversion plan for tools/aws-fis/jmeter/README.md so that it follows 
 # 04 What you see
 
 - `/skills` lists eight names with rotated descriptions; Copilot matches the task against the description column only
-- after the prompt, `/skills` shows `seqf-procedure-7` loaded, and only that one
-- the reply ends with `procedure: publish-and-open-source-a-repository`
-- the "conversion plan" is about licences, repository hardening, secret scanning and signed commits; nothing about H1s, tables of contents or markdownlint
-- `/context` grew by the publishing body (about 52 KB), not the conversion body (about 27 KB)
-- Claude Code loaded the same skill and remarked that its description and body disagree
+- `● skill(seqf-procedure-4)` appears, and only that one: the observability body, asked for a database decision record
+- a weaker model follows the wrong body and writes about logging, alerting and error budgets; Claude Sonnet 5 noticed the mismatch and rebuilt the ADR from the framework pages instead
+- either way you paid for it: 14.69 credits against 8.78 in scenario 03, 200.7k input tokens against 67.9k, `/context` 39k against 32k
 
 Lesson: names carry no routing signal. The description is the trigger condition, so write it for the router and keep it truthful about what the body does.
 
@@ -266,13 +263,15 @@ Runs 1 and 3 are the point. With no `edit` tool, "report only" is enforced. With
 
 # 06 Delegate when you need the result, not the investigation
 
-What it shows: an `auditor` agent (`tools: [read, search, execute]`) reads every Markdown file outside `.github/` and `.claude/` in full, tallies the level-2 headings outside code fences, cross-checks with one shell command and replies with only the number and its scope. The instructions say to use it for repository-wide tallies.
+Topic: the framework's page conventions. Most pages open with a `## Context` section; at the pin, 23 of 48 do and 25 do not. Finding out which means reading every page.
 
-- Run A, delegated: `cce reset 6 && cd "$(cce path 6)" && copilot`
-- Run B, direct: `cce reset 6 && cd "$(cce path 6)" && copilot --agent auditor`
+What it shows: an `auditor` agent (`tools: [read, search, execute]`) reads every Markdown file outside `.github/` and `.claude/` in full, notes which lack a `## Context` section, cross-checks with one shell command and replies with only the number and its scope.
+
+- Run A, delegated: `cce reset 6 && cd "$(cce path 6)" && copilot --allow-all --model claude-sonnet-5`
+- Run B, direct: the same with `--agent auditor`
 
 ```text
-How many level-2 Markdown headings (lines starting with "## ") are there across the Markdown files in this repository, excluding the .github directory? Use the auditor agent and give me only the number and its scope.
+How many Markdown pages in this repository are missing a "## Context" section? Exclude the .github directory. Use the auditor agent and give me only the number and its scope.
 ```
 
 ---
@@ -281,17 +280,17 @@ How many level-2 Markdown headings (lines starting with "## ") are there across 
 
 # 06 What you see
 
-Answer both ways: 218 across 48 upstream Markdown files (de-duplicating heading text gives 144, which is wrong).
+Answer both ways: 25 of 48 pages. Re-derive: `git ls-files '*.md' | grep -v '^\.github/' | while read -r f; do grep -qx '## Context' "$f" || echo "$f"; done | wc -l`
 
-Input tokens measured through `copilot -p`, Copilot CLI 1.0.83, default model:
+Measured on Claude Sonnet 5:
 
-| Run | Main thread, cumulative | Main thread, final call | Subagents, cumulative |
-| --- | --- | --- | --- |
-| A, delegated | 57,852 | 19,543 | 933,233 |
-| B, direct (`--agent auditor`) | 341,578 | 89,442 | 0 |
+| Run | `/context` | `Messages` after | Tokens ↑ | AI credits |
+| --- | --- | --- | --- | --- |
+| A, delegated | 20k → 21k | 468 | 1.3m | 75.44 |
+| B, direct (`--agent auditor`) | 7k → 112k | 104.2k | 472.7k | 55.37 |
 
 - Run A: `/context` after the reply is barely larger than at turn 0; two lines came back
-- Run B: `/context` grows by roughly the repository (about 376 KB); every later question carries the audit
+- Run B: `/context` grows by roughly the repository; every later question carries the audit
 - `/usage` shows the whole spend either way: delegation isolates context, not cost
 
 ---

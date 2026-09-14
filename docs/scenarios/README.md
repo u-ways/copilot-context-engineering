@@ -52,15 +52,15 @@ Two terminals make this comfortable: one for Copilot, one for the shell commands
 
 ## Scenarios
 
-Run them in order. Each one leans on the one before it, and the six together cover the three mechanisms in the [comparison table](../SUMMARY.md).
+Run them in order. Each one leans on the one before it, and the six together cover the three mechanisms in the [comparison table](../SUMMARY.md). Each guide opens with a short background on the framework topic it uses, so no prior knowledge of the framework is needed.
 
-| # | Scenario | The question it answers | Runs | Guide |
-| --- | --- | --- | --- | --- |
-| 01 | instructions-timeless | What belongs in repository instructions? Durable rules, never a snapshot of the repository. | 3 | [01-instructions-timeless.md](01-instructions-timeless.md) |
-| 02 | instructions-context-cost | What does a runbook in the instructions cost? Its full size, on every request. | 3 | [02-instructions-context-cost.md](02-instructions-context-cost.md) |
-| 03 | skills-on-demand | What do the same procedures cost as skills? Nothing, until a prompt matches one. | 2 | [03-skills-on-demand.md](03-skills-on-demand.md) |
-| 04 | skills-description-routing | Which skill loads? The one whose description matches; the name never counts. | 1 | [04-skills-description-routing.md](04-skills-description-routing.md) |
-| 05 | agent-permissions | Who may write a file? The agent whose tool list allows it, whatever the prompt says. | 3 (+ `./STRUGGLE.sh`) | [05-agent-permissions.md](05-agent-permissions.md) |
-| 06 | agent-context-isolation | Whose context pays for the investigation? The agent's, when you delegate; yours, when you do not. | 2 | [06-agent-context-isolation.md](06-agent-context-isolation.md) |
+| # | Scenario | Topic | The question it answers | Runs | Guide |
+| --- | --- | --- | --- | --- | --- |
+| 01 | instructions-timeless | GitHub Actions security guidance (SHA-pinned actions, Dependabot cooldown) | What belongs in repository instructions? Durable rules, never a snapshot of a page. | 3 | [01-instructions-timeless.md](01-instructions-timeless.md) |
+| 02 | instructions-context-cost | The seven engineering principles, and the eight task procedures | What does a runbook in the instructions cost? Its full size, on every request. | 3 | [02-instructions-context-cost.md](02-instructions-context-cost.md) |
+| 03 | skills-on-demand | Any Decision Records and managed cloud services | What do the same procedures cost as skills? Nothing, until a prompt matches one. | 2 | [03-skills-on-demand.md](03-skills-on-demand.md) |
+| 04 | skills-description-routing | How Copilot picks a skill (same ADR task) | Which skill loads? The one whose description matches; the name never counts. | 1 | [04-skills-description-routing.md](04-skills-description-routing.md) |
+| 05 | agent-permissions | Test coverage and quality gates | Who may write a file? The agent whose tool list allows it, whatever the prompt says. | 3 (+ `./STRUGGLE.sh`) | [05-agent-permissions.md](05-agent-permissions.md) |
+| 06 | agent-context-isolation | The framework's page conventions (the Context section) | Whose context pays for the investigation? The agent's, when you delegate; yours, when you do not. | 2 | [06-agent-context-isolation.md](06-agent-context-isolation.md) |
 
 The guides also ship with the tool: `cce guide 1` prints a guide and `cce guide scenarios` prints this page.

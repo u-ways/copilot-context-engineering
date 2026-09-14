@@ -2,7 +2,13 @@
 
 ## What it shows
 
-An `auditor` agent (`.github/agents/auditor.agent.md`, tools `[read, search, execute]`) is told to list every Markdown file outside `.github/` and `.claude/`, read each in full, tally the level-2 headings that sit outside code fences, cross-check the total with one shell command and reply with only the number and its scope. The short instructions say to use it for repository-wide tallies.
+### The topic
+
+The framework's page conventions. Most framework pages open with a `## Context` section that says where the page sits in the wider framework and links back to the principles or the quality checks; it is the first thing a reader meets after the title. Not every page has one: at the pinned commit, 23 of the 48 pages do and 25 do not, mostly tool guides, how-to guides and index pages. Finding out which is a small but real documentation audit, the kind of task that means reading every page.
+
+### The set-up
+
+An `auditor` agent (`.github/agents/auditor.agent.md`, tools `[read, search, execute]`) is told to list every Markdown file outside `.github/` and `.claude/`, read each in full, note which ones lack a `## Context` section outside code fences, cross-check the tally with one shell command and reply with only the number and its scope. The short instructions say to use it for repository-wide audits.
 
 You will send the same prompt twice: once in a normal session, where Copilot delegates and only the two-line answer comes back, and once with the auditor as your session's own agent, where all 48 file reads land in your context.
 
@@ -20,7 +26,7 @@ Record what you see as you go:
 The prompt, identical in both runs:
 
 ```text
-How many level-2 Markdown headings (lines starting with "## ") are there across the Markdown files in this repository, excluding the .github directory? Use the auditor agent and give me only the number and its scope.
+How many Markdown pages in this repository are missing a "## Context" section? Exclude the .github directory. Use the auditor agent and give me only the number and its scope.
 ```
 
 ### Run A: delegated
@@ -33,9 +39,9 @@ How many level-2 Markdown headings (lines starting with "## ") are there across 
 
 2. **Check**: `/context` at turn 0, around 20k; note the `Messages` line at 0.
 
-3. **Send** the prompt. Expect a collapsed block headed `● Auditor (model: claude-sonnet-5) Count level-2 ...` with a timer: that is the delegated agent working in its own context. Wait for it.
+3. **Send** the prompt. Expect a collapsed block headed `● Auditor (model: claude-sonnet-5) ...` with a timer: that is the delegated agent working in its own context. Wait for it.
 
-4. **Observe**: expect a two-line answer, 218 and its scope. Then `/context`: the total is barely above turn 0 and the `Messages` line holds only a few hundred tokens, because the reads happened in the auditor's context. `/usage` still shows the whole spend, delegated work included. `git status --porcelain` prints nothing.
+4. **Observe**: expect a two-line answer, 25 and its scope. Then `/context`: the total is barely above turn 0 and the `Messages` line holds only a few hundred tokens, because the reads happened in the auditor's context. `/usage` still shows the whole spend, delegated work included. `git status --porcelain` prints nothing.
 
 5. **Quit and reset**: `/exit`, then `cce reset 6`.
 
@@ -65,19 +71,18 @@ Measured on Claude Sonnet 5:
 
 | Run | `/context` turn 0 → after | `Messages` line after | `/usage` Tokens ↑ | AI credits (≈ $) | Time |
 | --- | --- | --- | --- | --- | --- |
-| A, delegated | 20k → 21k | 467 | 949.2k | 74.97 (≈ $0.75) | 3m 04s |
-| B, `--agent auditor` | 7k → 114k | 106.7k | 1.1m | 68.86 (≈ $0.69) | 2m 46s |
+| A, delegated | 20k → 21k | 468 | 1.3m | 75.44 (≈ $0.75) | 2m 31s |
+| B, `--agent auditor` | 7k → 112k | 104.2k | 472.7k | 55.37 (≈ $0.55) | 2m 07s |
 
-Delegation isolates the parent's context; it does not make the work cheaper. Both runs read the whole repository, so both paid for it; `/usage` shows the spend either way, and `/context` shows whose session carries the reads afterwards. In run A you can keep working in a 21k context; in run B every later question drags 114k along.
+Delegation isolates the parent's context; it does not make the work cheaper. Both runs read the whole repository, so both paid for it; `/usage` shows the spend either way, and `/context` shows whose session carries the reads afterwards. In run A you can keep working in a small context; in run B every later question drags the audit along.
 
 The non-interactive `just llm copilot` tier measures the same pair through `copilot -p` and reports main-thread and subagent input tokens separately; `just llm claude` does the same on Claude Code.
 
 ### The number
 
-- The answer is 218 in both runs, scoped to the 48 upstream Markdown files with `.github` and `.claude` excluded and fenced code ignored. Re-derive: `grep -rhE '^## ' --include='*.md' --exclude-dir=.github --exclude-dir=.claude . | wc -l`.
-- Only 144 heading texts are distinct: `grep -rhE '^## ' --include='*.md' --exclude-dir=.github --exclude-dir=.claude . | sort -u | wc -l`. The count is of occurrences; an agent that de-duplicates lands on 144 and is wrong.
+- The answer is 25 of 48 pages, scoped to the upstream Markdown files with `.github` and `.claude` excluded and fenced code ignored. Re-derive with one loop: `git ls-files '*.md' | grep -v '^\.github/' | while read -r f; do grep -qx '## Context' "$f" || echo "$f"; done | wc -l`. Drop the `| wc -l` to see which pages they are.
 - The file count: `git ls-files '*.md' | grep -v '^\.github/' | wc -l` prints 48.
-- At this pin no upstream heading sits inside a code fence, so the naive grep agrees with the fence-aware script shipped in this repository: `python3 scripts/s06_ground_truth.py "$(cce path 6)"` from a checkout of copilot-context-engineering prints 218 and the scope sentence.
+- At this pin no page hides a `## Context` line inside a code fence, so the plain loop agrees with the fence-aware script shipped in this repository: `python3 scripts/s06_ground_truth.py "$(cce path 6)"` from a checkout of copilot-context-engineering prints 25 and the scope sentence.
 
 The lesson: use a custom agent when you need a result and not the trail that produced it. The investigation still costs what it costs, but it stays out of the context you keep working in. Run B is what happens when the same role is worn by the main session instead of dispatched.
 
@@ -85,10 +90,10 @@ The lesson: use a custom agent when you need a result and not the trail that pro
 
 Rough figures from the measured runs (percentages are rounded):
 
-- Working context afterwards: about 82% smaller when delegated (21k against 114k), and the conversation itself about 99% smaller (467 tokens against 106.7k on the `Messages` line).
-- Cost: within about 8% either way (74.97 against 68.86 credits) and about the same input tokens (949k against 1.1m). Delegation saved nothing on the audit itself.
-- What you keep paying: every later turn in the direct session resends the 114k it accumulated, about 5 times what the delegated session resends. Ten follow-up questions cost roughly a million extra input tokens in run B and nothing extra in run A.
-- Same answer, 218, in 2 of 2 runs. The choice changes where the investigation lives, not whether it happens.
+- Working context afterwards: about 81% smaller when delegated (21k against 112k), and the conversation itself more than 99% smaller (468 tokens against 104.2k on the `Messages` line).
+- Cost: delegation saved nothing on the audit itself. This time the delegated run cost about 36% more (75.44 against 55.37 credits) and sent almost three times the input tokens (1.3m against 472.7k), because the auditor re-read files across several calls.
+- What you keep paying: every later turn in the direct session resends the 112k it accumulated, about 5 times what the delegated session resends.
+- Same answer, 25, in 2 of 2 runs. The choice changes where the investigation lives, not whether it happens.
 
 ## Reset
 

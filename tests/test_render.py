@@ -327,10 +327,10 @@ class TestHelpers:
         assert digest(first) == digest(same)
         assert digest(first) != digest([PlannedFile("a", b"1"), PlannedFile("b", b"2")])
 
-    def test_include_targets_cover_the_dated_blueprints_include(self) -> None:
+    def test_include_targets_cover_the_dated_actions_guidance_include(self) -> None:
         targets = include_targets()
 
-        assert IncludeTarget("blueprints.md", "2025-10-31") in targets
+        assert IncludeTarget("practices/actions-best-practices.md", "2025-10-31") in targets
         assert IncludeTarget("practices/testing.md") in targets
         assert all(not target.path.startswith("/") for target in targets)
 
